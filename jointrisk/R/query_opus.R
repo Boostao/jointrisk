@@ -121,3 +121,260 @@ system.time(dt <- get_risks(con))
 # 21: LONGICOM 14660  LONGICOM                         Longitude - commercial   CARACT
 # 22: LATITCOM 14661  LATITCOM                          Latitude - commercial   CARACT
 #       DETAIL    ID CODE_INFO                                       NOM_ABRG DATATYPE
+
+
+library(data.table)
+
+# This function tranforms the data...obviously
+
+transform_data <- function(data) {
+
+# Change the data to data.table
+data_cap_pure <- setDT(data)
+
+# Keep only geocode with good precision
+data_cap <- data_cap_pure[PREGEOCO %in% c("POINTADDRESS","STREETADDRESS","SUBADDRESS")]
+
+# Remove lines with empty geocode
+data_cap <- data_cap[!is.na(LATITCOM)]
+data_cap <- data_cap[!is.na(LONGICOM)]
+
+# Transform geocode in numeric
+data_cap$LATITCOM <- as.numeric(data_cap$LATITCOM)
+data_cap$LONGICOM <- as.numeric(data_cap$LONGICOM)
+
+# Choose the right TYPECONS
+which_lines <- which(is.na(data_cap$TYPECONS))
+set(data_cap , i = which_lines , j = "TYPECONS" , value =  data_cap[which(is.na(data_cap$TYPECONS))]$TYCONS2)
+
+# Put default value when we don't have the information
+which_lines <- which(is.na(data_cap$RISASGRB))
+set(data_cap , i = which_lines , j = "RISASGRB" , value =  "4")
+
+which_lines <- which(is.na(data_cap$SUPERREZ))
+set(data_cap , i = which_lines , j = "SUPERREZ" , value = 1)
+
+which_lines <- which(is.na(data_cap$TYPECONS))
+set(data_cap , i = which_lines , j = "TYPECONS" , value = 6)
+
+which_lines <- which(is.na(data_cap$PRINCFUS))
+set(data_cap , i = which_lines , j = "PRINCFUS" , value = 7)
+
+# Transform RISASGRB in ordered factor
+set(data_cap , j = "RISASGRB", value = ordered(data_cap$RISASGRB , levels = c("1", "2", "3", "4", "5", "6", "P")))
+
+# Merge intervenant number with product number
+set(data_cap , i =  , j = "ID" , value = paste0(data_cap$INTE_NO, "-",data_cap$POAS_NO, "-",data_cap$PBVEHRES))
+
+# Keep only the columns needed
+#data_cap <- data_cap[,c("AFFECTAT","COMAUTBA","LATITCOM","LONGICOM","SUPERREZ","UMESSUP2","TYPECONS","RISASGRB","PRINCFUS")]
+
+return(data_cap)
+
+}
+
+dt2 <-transform_data(dt)
+
+
+# This function calculates the radius for a risk in
+# order to create neighbors risks pockets later on.
+# It is based on many risk characteristics
+
+calculate_radius <- function(data) {
+
+# Input needed to calculate the radius : AFFECTAT, COMAUTBA, SUPERREZ, UMESSUP2, TYPECONS, RISASGRB, PRINCFUS
+
+data_cap <- setDT(data)
+
+# RISASGRB
+# This factor will be a in a multiplication later on
+set(data_cap , i = , j = "RISASGRB_fact" , value = 1)
+which_lines <- which(data_cap$RISASGRB < "5")
+set(data_cap , i = which_lines , j = "RISASGRB_fact" , value = 1)
+which_lines <- which(data_cap$RISASGRB >= "5")
+set(data_cap , i = which_lines , j = "RISASGRB_fact" , value = 2)
+
+# PRINCFUS and TYPECONS
+set(data_cap , i = , j = "PRINCFUS_TYPECONS_fact" , value = 0)
+
+which_lines <- which(data_cap$PRINCFUS <= 4 & data_cap$PRINCFUS >= 1 & data_cap$TYPECONS <= 2 & data_cap$TYPECONS >= 1)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 3)
+which_lines <- which(data_cap$PRINCFUS <= 4 & data_cap$PRINCFUS >= 1 & data_cap$TYPECONS <= 4 & data_cap$TYPECONS >= 3)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 6)
+which_lines <- which(data_cap$PRINCFUS <= 4 & data_cap$PRINCFUS >= 1 & data_cap$TYPECONS <= 6 & data_cap$TYPECONS >= 5)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 9)
+
+which_lines <- which(data_cap$PRINCFUS <= 7 & data_cap$PRINCFUS >= 5 & data_cap$TYPECONS <= 2 & data_cap$TYPECONS >= 1)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 4)
+which_lines <- which(data_cap$PRINCFUS <= 7 & data_cap$PRINCFUS >= 5 & data_cap$TYPECONS <= 4 & data_cap$TYPECONS >= 3)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 8)
+which_lines <- which(data_cap$PRINCFUS <= 7 & data_cap$PRINCFUS >= 5 & data_cap$TYPECONS <= 6 & data_cap$TYPECONS >= 5)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 12)
+
+which_lines <- which(data_cap$PRINCFUS <= 10 & data_cap$PRINCFUS >= 8 & data_cap$TYPECONS <= 2 & data_cap$TYPECONS >= 1)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 8)
+which_lines <- which(data_cap$PRINCFUS <= 10 & data_cap$PRINCFUS >= 8 & data_cap$TYPECONS <= 4 & data_cap$TYPECONS >= 3)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 16)
+which_lines <- which(data_cap$PRINCFUS <= 10 & data_cap$PRINCFUS >= 8 & data_cap$TYPECONS <= 6 & data_cap$TYPECONS >= 5)
+set(data_cap , i = which_lines , j = "PRINCFUS_TYPECONS_fact" , value = 25)
+
+# COMAUTBA
+# This factor will be a in a multiplication later on
+set(data_cap , i = , j = "COMAUTBA_fact" , value = 1)
+which_lines <- which(data_cap$COMAUTBA == "O")
+set(data_cap , i = which_lines , j = "COMAUTBA_fact" , value = 1.25)
+
+# AFFECTAT - Increase the radius for town hall
+# This factor will be a in a multiplication later on
+set(data_cap , i = , j = "AFFECTAT_fact" , value = 1)
+which_lines <- which(data_cap$affectation == "6670")
+set(data_cap , i = which_lines , j = "AFFECTAT_fact" , value = 1.25)
+
+# Base radius calculate with area
+set(data_cap , i = , j = "radius" , value = 9)
+which_lines <- which(data_cap$UMESSUP2 == "P" & data_cap$SUPERREZ < 200)
+set(data_cap , i = which_lines , j = "radius" , value = 9)
+which_lines <- which(data_cap$UMESSUP2 == "P" & data_cap$SUPERREZ >= 200)
+set(data_cap , i = which_lines , j = "radius" , value = sqrt((data_cap$SUPERREZ[which_lines]/10.764)/pi))
+which_lines <- which(is.na(data_cap$UMESSUP2) & data_cap$SUPERREZ < 200)
+set(data_cap , i = which_lines , j = "radius" , value = 9)
+which_lines <- which(is.na(data_cap$UMESSUP2) & data_cap$SUPERREZ >= 200)
+set(data_cap , i = which_lines , j = "radius" , value = sqrt((data_cap$SUPERREZ[which_lines]/10.764)/pi))
+which_lines <- which(data_cap$UMESSUP2 == "M" & data_cap$SUPERREZ < 10)
+set(data_cap , i = which_lines , j = "radius" , value = 9)
+which_lines <- which(data_cap$UMESSUP2 == "M" & data_cap$SUPERREZ >= 10)
+set(data_cap , i = which_lines , j = "radius" , value = sqrt((data_cap$SUPERREZ[which_lines])/pi))
+
+# Calculate the radius with factors
+# Warning : Radius is in meter
+# I add 2 meters for conservatism purpose
+set(data_cap , i = , j = "final_radius" , value = (data_cap$radius + 2 + data_cap$PRINCFUS_TYPECONS_fact * data_cap$RISASGRB_fact) * data_cap$COMAUTBA_fact * data_cap$AFFECTAT_fact)
+
+# Keep only the columns needed
+#data_cap <- data_cap[,c("LATITCOM","LONGICOM","final_radius")]
+
+return(data_cap)
+
+}
+
+dt3 <-calculate_radius(dt2)
+
+
+
+
+
+
+# This function takes a data containing IDs, radius and geocode
+# and creates pockets for neighbors risks. It returns a data
+# containing the pocket number for each PRCH_ID
+
+create_polygons <- function(data) {
+
+library(sf)
+
+# Transform into spatial data...thug life
+data_spatial <- st_as_sf(x = dt3,
+                         coords = c("LONGICOM", "LATITCOM"),
+                         crs = "+proj=longlat +datum=WGS84") %>% st_transform(3488)
+
+# Create circles around geocode
+circles <- st_buffer(data_spatial, dist = data_spatial$final_radius)
+
+# Create polygons
+pocket <-st_union(circles)
+
+# The last one was a multipolygon...so sad...put that thug into polygons
+pocket2 <-st_cast(pocket, "POLYGON")
+
+# Output a matrix that checks if my geocodes are in each polygon
+matrix_poly <-st_intersects(data_spatial,pocket2,sparse = TRUE)
+
+# Change that matrix into an actually workable class
+as.data.frame(matrix_poly)
+
+############## Il faut exporter la liste de PRCH_ID pour OPUS et l'objet pocket2 pour le processus live
+
+}
+
+
+
+
+
+# Process liivvvveeeeeeeeeee
+# Faire une fonction qui a du sens avec ça
+# Transform into spatial data...thug life
+data_spatial <- st_as_sf(x = data_cap_new,
+                         coords = c("longitude", "latitude"),
+                         crs = "+proj=longlat +datum=WGS84") %>% st_transform(3488)
+
+# Create circles around geocode
+cercles <- st_buffer(data_spatial, dist = data_spatial$rayon_final)
+
+# Output a matrix that checks if my geocodes are in each polygon
+matrix_poly <-st_intersects(cercles,poly,sparse = TRUE)
+
+# Extract lines pocket touching our brand new potential risk
+poly_touch<-poly[c(unlist(matrix_poly)),]
+
+
+
+
+
+
+# This function takes a data containing IDs, radius and geocode
+# and creates pockets for neighbors risks. It returns a data
+# containing the pocket number for each PRCH_ID
+
+create_map <- function(data, pocket) {
+
+library(plotly)
+library(data.table)
+library(dplyr)
+library(leaflet)
+library(htmlwidgets)
+library(htmltools)
+
+data_cap <- data
+
+data_cap[, popup:= (paste("<b>Intervenant :</b>",ID, "<br/> <b>Produit :</b>",PROD_CODE,"<br/> <b>TIV :</b>",MTTOTRAS
+                          ,"<br/> <b>FUS :</b>",PRINCFUS,"<br/> <b>Type construction :</b>",TYPECONS,"<br/> <b>Classe biens :</b>",RISASGRB
+                          ,"<br/> <b>Superficie :</b>",SUPERREZ,"<br/> <b>Rayon :</b>",round(final_radius,0)))]
+data_cap$popup3 <- sapply(data_cap$popup,HTML)
+
+icons3 <- awesomeIcons(
+  icon = if_else(data_cap$PROD_CODE == "MCO", 'building',
+                 if_else(data_cap$PROD_CODE == "MPF", 'calendar',
+                         if_else(data_cap$PROD_CODE == "MB", 'print','shopping-cart'))),
+  iconColor = 'Gainsboro',
+  library = 'fa',
+  markerColor = if_else(data_cap$PROD_CODE == "MCO", 'darkred',
+                        if_else(data_cap$PROD_CODE == "MPF", 'darkgreen',
+                                if_else(data_cap$PROD_CODE == "MB", 'darkblue','darkpurple'))),
+  squareMarker = FALSE)
+
+
+d_wgs84 <- st_transform(pocket, "+init=epsg:4326")
+
+map <- leaflet() %>%
+  setView(lng = -71.2682, lat = 46.7927, zoom = 07) %>%
+  addProviderTiles(providers$Esri, group = "Esri") %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Satellite")  %>%
+  addAwesomeMarkers(~LONGICOM ,~LATITCOM, icon=icons3, popup = ~popup3,data= data_cap, clusterOptions =    markerClusterOptions())  %>%
+  addLayersControl(baseGroups = c("Esri","Satellite"),
+                   options = layersControlOptions(collapsed = F),
+                   position = "topright"
+  ) %>%
+  addPolygons(data=d_wgs84) %>%
+  addMeasure(
+    position = "bottomleft",
+    primaryLengthUnit = "meters",
+    secondaryLengthUnit = "kilometers",
+    primaryAreaUnit = "sqmeters",
+    activeColor = "#3D535D",
+    completedColor = "#7D4479",
+    localization = "fr")
+return(map)
+
+}
+
+create_map(dt3,pocket2)
