@@ -1,11 +1,13 @@
 Package: jointrisk
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Obtain et return joint risk IDs
+Version: 1.0.0
+Author: Alexandre Leclerc, Bruno Tremblay
+Maintainer: Bruno Tremblay <bruno.tremblay@lacapitale.com>
+Description: Joint risk commercial project.
+License: GPL-2
 Encoding: UTF-8
 LazyData: true
+Depends: R (>= 3.6)
+Imports: ROracle, data.table, sf, jsonlite
+RoxygenNote: 6.1.1
