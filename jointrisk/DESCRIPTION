@@ -9,5 +9,6 @@ License: GPL-2
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.6)
-Imports: ROracle, data.table, sf, jsonlite
+Imports: data.table, sf, jsonlite
+Sugggest: ROracle, extractnetezza
 RoxygenNote: 6.1.1

@@ -8,10 +8,10 @@ function() {
 }
 
 #* Update polygons
-#* @post /update_polygons
-#* @serializer jsongzipped
-function() {
-    return(get_polygons())
+#* @get /update_polygons
+#* @param file
+function(file) {
+    return(update_polygons(load_risk_cgen(file)))
 }
 
 #* Get polygons id
