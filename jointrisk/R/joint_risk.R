@@ -13,6 +13,7 @@ pkgV <- as.character(packageVersion("jointrisk"))
 
 # Functions to extract data from datawarehouse used to compute polygons
 
+#' @export
 #' @title Get risks CGEN from Oracle
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
@@ -23,6 +24,8 @@ get_risks_cgen_oracle <- function() {
                             Sys.getenv("USERNAME"),
                             dbname = "(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL=TCP)(HOST = opus_intg.bd.capitale.qc.ca)(PORT = 1710)))(CONNECT_DATA = (SERVICE_NAME = intg.capitale.qc.ca)(SERVER = DEDICATED)))",
                             bigint = "integer")
+
+  # Updater avec la query qui utilise les codes equiv
   query <- paste0("
     SELECT POAS.POAS_NO,
            POAS.INTE_NO,
@@ -65,7 +68,7 @@ get_risks_cgen_oracle <- function() {
 
   ")
 
-  dt <- ROracle::dbGetQuery(con, query)
+  dt <- ROracle::dbGetQuery(con, query, bulk_read = 50000L)
   data.table::setDT(dt, key = "VEPC_ID")
 
   # Check that there is only one VEPC_ID per PRCH_ID combination
@@ -88,12 +91,13 @@ get_risks_cgen_oracle <- function() {
   return(dt)
 }
 
+#' @export
 #' @title Get risks CGEN from extractnetezza
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
 #' @importFrom data.table setnames
 get_risks_cgen <- function() {
-  options(extractnetezza.context = 1)
+  options(extractnetezza.context = 11)
   dt <- extractnetezza::get_policies(
     inforce = TRUE,
     partial = "PRO",
@@ -112,6 +116,7 @@ get_risks_cgen <- function() {
                   SUPERREZ, TOITSTRU, UMESSUP2)])
 }
 
+#' @export
 #' @title Get risks CGEN from a file
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
@@ -180,17 +185,13 @@ append_typecons <- function(dt) {
 transform_cgen <- function(dt) {
 
   data.table::set(dt,
-                  j = c("LATITCOM", "LONGICOM", "TYPECONS", "RISASGRB", "SUPERREZ", "PRINCFUS"),
+                  j = c("LATITCOM", "LONGICOM", "TYPECONS", "SUPERREZ", "PRINCFUS"),
                   value = list(
                     as.numeric(.subset2(dt, "LATITCOM")),
                     as.numeric(.subset2(dt, "LONGICOM")),
                     {x <- .subset2(dt, "TYPECONS"); y <- .subset2(dt, "TYCONS2");
                      nax <- which(is.na(x)); nay <- which(is.na(y[nax]));
                      x[nax] <- y[nax]; x[nax[nay]] <- TYPECONS_DEFAULT;
-                     x},
-                    {x <- .subset2(dt, "RISASGRB");
-                     nax <- which(is.na(x));
-                     x[nax] <- RISASGRB_DEFAULT;
                      x},
                     {x <- .subset2(dt, "SUPERREZ");
                      nax <- which(is.na(x));
@@ -218,8 +219,8 @@ calculate_radius <- function(dt) {
                   value = list({
                     RISASGRB_F          <- c(1L, 2L)[1L + as.integer(.subset2(dt, "RISASGRB") %chin% c("5", "6", "P"))];
                     COMAUTBA_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUTBA") %in% "O")];
-                    AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "6670")];
-                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUP2") %in% c("P", NA));
+                    AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "C6670")];
+                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUP2") %in% c("PI", "*", NA));
                     CONVERSION_F        <- c(1, 10.764)[M_OR_P_NA];
                     LOWERLIMIT_F        <- c(GRDFLRAREA_M_LIM, GRDFLRAREA_P_LIM)[M_OR_P_NA];
                     PRINCFUS_TYPECONS_F <- TYPECONS_x_PRINCFUS[.subset2(dt, "TYPECONS") + (.subset2(dt, "PRINCFUS") - 1L) * 6L];
@@ -303,11 +304,20 @@ create_polygons <- function(dt) {
 #' Oracle INTG (require ROracle).
 #' @return A data.table with PRCH_ID and POLYGON_ID.
 update_polygons <- function(source) {
+  tick <- Sys.time()
+  prev_npol <- nrow(.inmempoly$boundaries)
+  prev_ndet <- nrow(.inmempoly$details)
   append_typecons(source)
   transform_cgen(source)
   calculate_radius(source)
   create_polygons(source)
-  cat("Polygons definition updated on", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME"))))
+  next_npol <- nrow(.inmempoly$boundaries)
+  next_ndet <- nrow(.inmempoly$details)
+  tock <- Sys.time() - tick
+  cat("Polygons definition updated on ", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME")), collapse = ""),
+      " in ", format(unclass(tock), digits = 4)," ", attr(tock, "units"),". Previous definition had ",
+      prev_npol," polygons from ", prev_ndet," risks, current has ", next_npol," poly from ",
+      next_ndet," risks.\n", sep = "")
   return(invisible())
 }
 
@@ -322,13 +332,13 @@ update_polygons <- function(source) {
 #' @examples
 #' \dontrun{
 #' dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUTBA":"NA",
-#' "AFFECTAT":"8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
+#' "AFFECTAT":"C8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
 #' "MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
-#' "UMESSUP2":"P","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
+#' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
 #' get_polygons_id(dt)
 #' }
 get_polygons_id <- function(dt) {
-  setDT(dt)
+  data.table::setDT(dt)
   required <- c("PRCH_ID", "COMAUTBA", "AFFECTAT", "LATITCOM", "LONGICOM", "MTTOTRAS",
                 "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS", "TYCONS2")
   if (!all(required %chin% names(dt))) {
@@ -344,25 +354,35 @@ get_polygons_id <- function(dt) {
   newrisk <- sf::st_buffer(dt_sp, dist = dt$RISKRADIUS)
   b <- as.list(sf::st_bbox(newrisk))
   candidate_polys_idx <- .inmempoly$boundaries[b$xmin < xmax & b$xmax > xmin & b$ymin < ymax & b$ymax > ymin, which = TRUE]
+  matches <- sf::st_intersects(newrisk, .inmempoly$polygons[candidate_polys_idx])
 
   # Formuler une reponse de retour qui fait du sens
-
+  # Enlever les risques conjoints avec lui-même (meme PRCH_ID ou POL_NO, PRCH_NO)
+  # Qu'est-ce qui arrive sur un copier-produit?
   # max RISASGRB, sum MTTOTRAS
 
-  dt_poly <- sf::st_intersects(newrisk, .inmempoly$polygons[candidate_polys_idx], sparse = FALSE)
-  setDT(dt_poly)
-  data.table::set(dt_poly, j = "PRCH_ID", value = .subset2(dt, "PRCH_ID")[.subset2(dt_poly, "row.id")])
+  res <- lapply(seq_len(length(matches)), function(x) {
+    prch_id <- .subset2(dt, "PRCH_ID")[x]
+    jr <- .inmempoly$details[POLYGON_INDEX %in% candidate_polys_idx[matches[[x]]] & PRCH_ID != prch_id]
+    tiv <- sum(.subset2(dt, "MTTOTRAS")[x], .subset2(jr, "MTTOTRAS"), na.rm = TRUE)
+    maxgrb <- max(.subset2(dt, "RISASGRB")[x], .subset2(jr, "RISASGRB"), na.rm = TRUE)
+    set(jr, j = c("LONGICOM", "LATITCOM", "RISKRADIUS", "POLYGON_INDEX"), value = NULL)
+    list(
+      "PRCH_ID" = prch_id,
+      "TIV" = tiv,
+      "MAXGRB" = maxgrb,
+      "JOINTRISKS" = jr
+    )})
 
-  return(c(list("version" = pkgV),
-           list("polygons" = dt_poly[,list(POLYGON_ID = list(c(col.id))), by = list(PRCH_ID)])))
+  return(list("version" = pkgV, "results" = res))
 }
 
 #' Warmup vectorizer functions for optimized runs.
 #' @importFrom jsonlite fromJSON
 #' @export
 warmup <- function() {
-  dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUTBA":"NA","AFFECTAT":"8112","LATITCOM":"45.6388",
-                            "LONGICOM":"-73.8438","MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,"UMESSUP2":"P",
+  dt <- jsonlite::fromJSON('[{"PRCH_ID":14543672,"COMAUTBA":"NA","AFFECTAT":"C8112","LATITCOM":"45.6388",
+                            "LONGICOM":"-73.8438","MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,"UMESSUP2":"PI",
                             "TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
   get_polygons_id(dt)
   return(invisible())

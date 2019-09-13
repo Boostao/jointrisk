@@ -1,6 +1,6 @@
 ## code to prepare `dataraw` dataset goes here
 library(extractnetezza)
-options(extractnetezza.context = 1)
+options(extractnetezza.context = 11)
 compo <- get_compo(compo = c("COTYCONS", "COTYCON2"), inforce = TRUE)
 
 usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
