@@ -316,7 +316,7 @@ update_polygons <- function(source) {
   tock <- Sys.time() - tick
   cat("Polygons definition updated on ", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME")), collapse = ""),
       " in ", format(unclass(tock), digits = 4)," ", attr(tock, "units"),". Previous definition had ",
-      prev_npol," polygons from ", prev_ndet," risks, current has ", next_npol," poly from ",
+      prev_npol," polygons from ", prev_ndet," risks, current has ", next_npol," polygons from ",
       next_ndet," risks.\n", sep = "")
   return(invisible())
 }
