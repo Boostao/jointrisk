@@ -169,10 +169,6 @@ append_typecons <- function(dt) {
      on = list(RESAUFEU = RESAUFEU),
      `:=`(TYCONS2 = as.integer(TYCONS2))]
 
-  data.table::set(dt,
-                  j = c("MURSTRUC", "PLANCHER", "TOITSTRU", "REVETEME", "RESAUFEU", "RVEXTBET", "RVEXTBRI"),
-                  value = NULL)
-
   return(dt)
 
 }
@@ -337,7 +333,7 @@ update_polygons <- function(source) {
 #' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
 #' get_polygons_id(dt)
 #' }
-get_polygons_id <- function(dt) {
+get_polygon_id <- function(dt) {
   data.table::setDT(dt)
   required <- c("PRCH_ID", "COMAUTBA", "AFFECTAT", "LATITCOM", "LONGICOM", "MTTOTRAS",
                 "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS", "TYCONS2")
@@ -374,7 +370,7 @@ get_polygons_id <- function(dt) {
       "JOINTRISKS" = jr
     )})
 
-  return(list("version" = pkgV, "results" = res))
+  return(res)
 }
 
 #' Warmup vectorizer functions for optimized runs.

@@ -19,5 +19,8 @@ function(file) {
 #* @post /polygons
 #* @serializer json
 function(dt) {
-    return(get_polygons_id(dt))
+    return(
+      list("version" = jointrisk:::pkgV,
+           "results" = get_polygon_id(dt))
+    )
 }
