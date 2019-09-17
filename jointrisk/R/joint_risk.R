@@ -380,6 +380,6 @@ warmup <- function() {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":14543672,"COMAUTBA":"NA","AFFECTAT":"C8112","LATITCOM":"45.6388",
                             "LONGICOM":"-73.8438","MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,"UMESSUP2":"PI",
                             "TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
-  get_polygons_id(dt)
+  get_polygon_id(dt)
   return(invisible())
 }

@@ -5,6 +5,10 @@ compo <- get_compo(compo = c("COTYCONS", "COTYCON2"), inforce = TRUE)
 
 usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 
+
+# How to use on an external dataset
+
+
 # Visualization
 # This function takes a data containing IDs, radius and geocode
 # and creates pockets for neighbors risks. It returns a data
