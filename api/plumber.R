@@ -1,5 +1,6 @@
 library(jointrisk)
-options(jointrisk.riskfile = "filelocation.csv")
+options(jointrisk.riskfile = "soussnnn.csv")
+getwd()
 
 update_polygons(load_risk_cgen())
 warmup()

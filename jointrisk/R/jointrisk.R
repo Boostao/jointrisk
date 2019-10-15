@@ -52,7 +52,7 @@ calculate_radius <- function(dt) {
                     RISASGRB[nax]       <- RISASGRB_DEFAULT
                     RISASGRB_F          <- c(1L, 2L)[1L + as.integer(RISASGRB %chin% c("5", "6", "P"))]
 
-                    COMAUTBA_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUTBA") %in% "O")]
+                    COMAUBAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUBAT") %in% "O")]
                     AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "C6670")]
                     M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUP2") %in% c("PI", "*", NA))
                     CONVERSION_F        <- c(1, 10.764)[M_OR_P_NA]
@@ -79,7 +79,7 @@ calculate_radius <- function(dt) {
 
                     IND                 <- (GRDFLRAREA >= LOWERLIMIT_F)
                     RADIUS[IND]         <- sqrt(GRDFLRAREA[IND]/CONVERSION_F[IND]/pi)
-                    (RADIUS + RADIUS_MFAD + PRINCFUS_TYPECONS_F * RISASGRB_F) * COMAUTBA_F * AFFECTAT_F
+                    (RADIUS + RADIUS_MFAD + PRINCFUS_TYPECONS_F * RISASGRB_F) * COMAUBAT_F * AFFECTAT_F
                   }))
 }
 
@@ -158,11 +158,11 @@ update_polygons <- function(source) {
 #' the precomputed pockets.
 #' @param dt A data.frame with the following
 #' @return PRCH_ID and POLYGON_ID with package version.
-#' @importFrom data.table set setDT %chin% rbindlist
+#' @importFrom data.table set setDT %chin% rbindlist copy
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
 #' @examples
 #' \dontrun{
-#' dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUTBA":"NA",
+#' dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUBAT":"NA",
 #' "AFFECTAT":"C8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
 #' "MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
 #' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
@@ -173,7 +173,7 @@ get_joint_risks <- function(dt) {
     res <- list("WARNING" = "Empty polygons definition.")
   } else {
     data.table::setDT(dt)
-    required <- c("PRCH_ID", "COMAUTBA", "AFFECTAT", "LATITCOM", "LONGICOM", "MTTOTRAS",
+    required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM", "MTTOTRAS",
                   "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS", "TYCONS2")
     if (!all(required %chin% names(dt))) {
       notin <- required[!required %chin% names(dt)]
@@ -202,11 +202,10 @@ get_joint_risks <- function(dt) {
 
     res <- lapply(seq_len(length(matches)), function(x) {
       self_idx <- which(prch_id[x] == .subset2(.inmempoly, "PRCH_ID"))
-      jr_idx <- candidate_polys_idx[matches[[x]]]
+      jr_idx <- poly_idx[matches[[x]]]
       jr <- setDT(copy(.inmempoly[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
       tiv <- sum(mttotras[x], .subset2(jr, "MTTOTRAS"), na.rm = TRUE)
       maxgrb <- max(.subset2(dt, "RISASGRB")[x], .subset2(jr, "RISASGRB"), na.rm = TRUE)
-      set(jr, j = c("LONGICOM", "LATITCOM", "RISKRADIUS", "POLYGON_INDEX"), value = NULL)
       list(
         "PRCH_ID" = prch_id[x],
         "TIV" = tiv,
@@ -226,7 +225,7 @@ get_joint_risks <- function(dt) {
 #' that field. Field value are equivalence value (COOP_ID 11).
 #' @param prefix A character string. In case the fields just need a prefix (something like "PROD_ID"). Default to "".
 #' @param affectat A character string. Default to paste0(prefix, "AFFECTAT").
-#' @param comautba A character string. Default to paste0(prefix, "COMAUTBA").
+#' @param comaubat A character string. Default to paste0(prefix, "COMAUBAT").
 #' @param latitcom A character string. Default to paste0(prefix, "LATITCOM").
 #' @param longicom A character string. Default to paste0(prefix, "LONGICOM").
 #' @param murstruc A character string. Default to paste0(prefix, "MURSTRUC").
@@ -243,7 +242,7 @@ get_joint_risks <- function(dt) {
 #' @return A data.table with paste0(prefix, "POLYINDX") column. If the risk has no
 #' appropriate geolocation information, index will be NA.
 #' @importFrom sf st_cast st_intersects st_union
-#' #' @examples
+#' @examples
 #' \dontrun{
 #' dt <- extractnetezza::get_policies(
 #'     inforce = TRUE,
@@ -253,12 +252,12 @@ get_joint_risks <- function(dt) {
 #'                    MCAAF_ID = 2),
 #'     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
 #'   )
-#' append_polygons_idx(dt, prefix = "PROD_", comautba = "PROD_14367")
+#' append_polygons_idx(dt, prefix = "PROD_")
 #' }
 append_polygons_idx <- function(dt,
                                 prefix = "",
                                 affectat = paste0(prefix, "AFFECTAT"),
-                                comautba = paste0(prefix, "COMAUTBA"),
+                                comaubat = paste0(prefix, "COMAUBAT"),
                                 latitcom = paste0(prefix, "LATITCOM"),
                                 longicom = paste0(prefix, "LONGICOM"),
                                 murstruc = paste0(prefix, "MURSTRUC"),
@@ -272,13 +271,13 @@ append_polygons_idx <- function(dt,
                                 superrez = paste0(prefix, "SUPERREZ"),
                                 toitstru = paste0(prefix, "TOITSTRU"),
                                 umessup2 = paste0(prefix, "UMESSUP2")) {
-  source <- copy(dt[, c(affectat, comautba, latitcom, longicom, murstruc, plancher,
+  source <- copy(dt[, c(affectat, comaubat, latitcom, longicom, murstruc, plancher,
                             pregeoco, princfus, resaufeu, risasgrb, rvextbet,
                             rvextbri, superrez, toitstru, umessup2), with = FALSE])
   setnames(source,
-           c(affectat, comautba, latitcom, longicom, murstruc, plancher, pregeoco, princfus,
+           c(affectat, comaubat, latitcom, longicom, murstruc, plancher, pregeoco, princfus,
              resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessup2),
-           c("AFFECTAT", "COMAUTBA", "LATITCOM", "LONGICOM", "MURSTRUC", "PLANCHER", "PREGEOCO", "PRINCFUS",
+           c("AFFECTAT", "COMAUBAT", "LATITCOM", "LONGICOM", "MURSTRUC", "PLANCHER", "PREGEOCO", "PRINCFUS",
              "RESAUFEU", "RISASGRB", "RVEXTBET", "RVEXTBRI", "SUPERREZ", "TOITSTRU", "UMESSUP2"))
   set(source, j = "MERGEKEY", value = seq_len(nrow(source)))
   jointrisk:::append_typecons(source)
@@ -312,10 +311,10 @@ get_risks_cgen <- function() {
     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
   )
   data.table::setnames(dt, gsub("PROD_", "", names(dt)))
-  data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT", "14367"), c("INTE_NO", "PRCH_ID", "PROD_CODE", "COMAUTBA"), skip_absent = TRUE)
+  data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT"), c("INTE_NO", "PRCH_ID", "PROD_CODE"), skip_absent = TRUE)
   numcol  <- c("SUPERREZ", "RVEXTBET", "RVEXTBRI", "PRINCFUS", "MTTOTRAS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
-  return(dt[,list(INTE_NO, POAS_NO, PRCH_NO, PRCH_ID, PROD_CODE, COMAUTBA,
+  return(dt[,list(INTE_NO, POAS_NO, PRCH_NO, PRCH_ID, PROD_CODE, COMAUBAT,
                   AFFECTAT, LATITCOM, LONGICOM, MTTOTRAS, MURSTRUC, PLANCHER,
                   PREGEOCO, PRINCFUS, RESAUFEU, RISASGRB, RVEXTBET, RVEXTBRI,
                   SUPERREZ, TOITSTRU, UMESSUP2)])
@@ -330,7 +329,8 @@ load_risk_cgen <- function() {
 
   file <- getOption("jointrisk.riskfile")
 
-  dt <- data.table::fread(file)
+  dt <- data.table::fread(file, header = FALSE,
+                          col.names = c("POAS_NO", "INTE_NO", "PRCH_NO", "PROD_CODE", "PRCH_ID", "VEPC_ID", "QUESTION", "REPONSE", "VAAT_ID"))
   data.table::setDT(dt, key = "VEPC_ID")
 
   # Check that there is only one VEPC_ID per PRCH_ID combination
@@ -344,7 +344,6 @@ load_risk_cgen <- function() {
 
   dt <- data.table::dcast(dt, INTE_NO + POAS_NO + PRCH_NO + PRCH_ID + PROD_CODE ~ QUESTION, value.var = "REPONSE")
 
-  data.table::setnames(dt, "14367", "COMAUTBA", skip_absent = TRUE)
   numcol  <- c("SUPERREZ", "RVEXTBET", "RVEXTBRI", "PRINCFUS", "MTTOTRAS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
 
@@ -356,7 +355,7 @@ load_risk_cgen <- function() {
 #' @importFrom jsonlite fromJSON
 #' @export
 warmup <- function() {
-  dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUTBA":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
+  dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
                             "LONGICOM":"-71.30196","MTTOTRAS":"NA","PRINCFUS":"NA","RISASGRB":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
                             "TYPECONS":2,"TYCONS2":"NA","RISKRADIUS":15.00000}]')
   get_joint_risks(dt)
