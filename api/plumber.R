@@ -19,7 +19,7 @@ function() {
 
 #* Get polygons id
 #* @param dt
-#* @post /polygons
+#* @post /jointrisk
 #* @serializer json
 function(dt) {
     return(

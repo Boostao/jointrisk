@@ -3,11 +3,6 @@ LABEL maintainer="Bruno Tremblay <bruno.tremblay@lacapitale.com>"
 
 WORKDIR /src
 
-COPY ./api /etc
-COPY soussnnn.csv soussnnn.csv
-COPY lacapitale-root-ca.crt /usr/local/share/ca-certificates/lacapitale-root-ca.crt
-COPY jointrisk_1.0.0.tar.gz jointrisk_1.0.0.tar.gz
-
 RUN mkdir /usr/local/share/ca-certificates || exit 0
 RUN /usr/sbin/update-ca-certificates
 
@@ -24,6 +19,11 @@ RUN install2.r --error \
   data.table \
   plumber \
   sf
+
+COPY ./api /etc
+COPY soussnnn.csv soussnnn.csv
+COPY lacapitale-root-ca.crt /usr/local/share/ca-certificates/lacapitale-root-ca.crt
+COPY jointrisk_1.0.0.tar.gz jointrisk_1.0.0.tar.gz
 
 RUN R CMD INSTALL jointrisk_1.0.0.tar.gz
 
