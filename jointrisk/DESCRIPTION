@@ -1,0 +1,14 @@
+Package: jointrisk
+Type: Package
+Title: Obtain et return joint risk IDs
+Version: 1.0.0
+Author: Alexandre Leclerc, Bruno Tremblay
+Maintainer: Bruno Tremblay <bruno.tremblay@lacapitale.com>
+Description: Joint risk commercial project.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.6)
+Imports: data.table, sf (>= 0.7.7), jsonlite
+Sugggest: extractnetezza
+RoxygenNote: 6.1.1
