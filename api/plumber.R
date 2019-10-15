@@ -1,4 +1,7 @@
 library(jointrisk)
+options(jointrisk.riskfile = "filelocation.csv")
+
+update_polygons(load_risk_cgen())
 warmup()
 
 #* Health check
@@ -9,9 +12,8 @@ function() {
 
 #* Update polygons
 #* @get /update_polygons
-#* @param file
-function(file) {
-    return(update_polygons(load_risk_cgen(file)))
+function() {
+    return(update_polygons(load_risk_cgen()))
 }
 
 #* Get polygons id
@@ -21,6 +23,6 @@ function(file) {
 function(dt) {
     return(
       list("version" = jointrisk:::pkgV,
-           "results" = get_polygon_id(dt))
+           "results" = get_joint_risks(dt))
     )
 }

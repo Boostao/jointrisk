@@ -22,6 +22,16 @@ library(htmlwidgets)
 library(htmltools)
 library(jointrisk)
 
+dt <- extractnetezza::get_policies(
+    inforce = TRUE,
+    partial = "PRO",
+    filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
+                   MLIAF_ID = 4,
+                   MCAAF_ID = 2),
+    detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
+  )
+append_polygons_idx(dt, prefix = "PROD_", comautba = "PROD_14367")
+
 create_map <- function(data, pocket) {
 
 data_cap <- data
