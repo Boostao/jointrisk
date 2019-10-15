@@ -1,0 +1,10 @@
+^data-raw$
+^api$
+^vignettes$
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.RData$
+^\.Rhistory$
+^.*\.yaml$
+^.*\.html$
+^.*\.csv$

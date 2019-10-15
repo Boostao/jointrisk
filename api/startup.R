@@ -1,6 +1,6 @@
 library(plumber)
 
-pr <- plumb("/etc/plumber.R")
+pr <- plumb("./api/plumber.R")
 # pr$registerHooks(list(
 #   postroute = function(req) {
 #     if (req$REQUEST_METHOD == "POST") {
