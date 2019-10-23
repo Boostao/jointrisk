@@ -1,6 +1,5 @@
-library(jointrisk)
 options(jointrisk.riskfile = "soussnnn.csv")
-getwd()
+library(jointrisk)
 
 update_polygons(load_risk_cgen())
 warmup()
@@ -19,7 +18,7 @@ function() {
 
 #* Get polygons id
 #* @param dt
-#* @post /jointrisk
+#* @post /jointrisk/opus
 #* @serializer json
 function(dt) {
     return(

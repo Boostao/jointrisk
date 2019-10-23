@@ -357,7 +357,7 @@ load_risk_cgen <- function() {
 warmup <- function() {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
                             "LONGICOM":"-71.30196","MTTOTRAS":"NA","PRINCFUS":"NA","RISASGRB":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
-                            "TYPECONS":2,"TYCONS2":"NA","RISKRADIUS":15.00000}]')
+                            "TYPECONS":2,"TYCONS2":"NA"}]')
   get_joint_risks(dt)
   return(invisible())
 }
