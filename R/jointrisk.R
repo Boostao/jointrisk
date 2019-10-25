@@ -164,7 +164,7 @@ update_polygons <- function(source) {
 #' \dontrun{
 #' dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUBAT":"NA",
 #' "AFFECTAT":"C8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
-#' "MTTOTRAS":940000,"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
+#' "PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
 #' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
 #' get_polygons_id(dt)
 #' }
@@ -173,7 +173,7 @@ get_joint_risks <- function(dt) {
     res <- list("WARNING" = "Empty polygons definition.")
   } else {
     data.table::setDT(dt)
-    required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM", "MTTOTRAS",
+    required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM",
                   "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS", "TYCONS2")
     if (!all(required %chin% names(dt))) {
       notin <- required[!required %chin% names(dt)]
@@ -195,21 +195,20 @@ get_joint_risks <- function(dt) {
     # Formuler une reponse de retour qui fait du sens
     # Enlever les risques conjoints avec lui-même (meme PRCH_ID ou POL_NO, PRCH_NO)
     # Qu'est-ce qui arrive sur un copier-produit?
-    # max RISASGRB, sum MTTOTRAS
+    # max RISASGRB
 
     prch_id <- .subset2(dt, "PRCH_ID")
-    mttotras <- .subset2(dt, "MTTOTRAS")
 
     res <- lapply(seq_len(length(matches)), function(x) {
       self_idx <- which(prch_id[x] == .subset2(.inmempoly, "PRCH_ID"))
       jr_idx <- poly_idx[matches[[x]]]
       jr <- setDT(copy(.inmempoly[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
-      tiv <- sum(mttotras[x], .subset2(jr, "MTTOTRAS"), na.rm = TRUE)
-      maxgrb <- max(.subset2(dt, "RISASGRB")[x], .subset2(jr, "RISASGRB"), na.rm = TRUE)
+      tiv <- sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE)
+      maxgrb <- max(.subset2(jr, "RISASGRB"), na.rm = TRUE)
       list(
         "PRCH_ID" = prch_id[x],
-        "TIV" = tiv,
-        "MAXGRB" = maxgrb,
+        "jointRiskTotalInsuredValue" = tiv,
+        "jointRiskMaximumPropertyClass" = maxgrb,
         "JOINTRISKS" = jr
       )})
   }
@@ -356,7 +355,7 @@ load_risk_cgen <- function() {
 #' @export
 warmup <- function() {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
-                            "LONGICOM":"-71.30196","MTTOTRAS":"NA","PRINCFUS":"NA","RISASGRB":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
+                            "LONGICOM":"-71.30196","PRINCFUS":"NA","RISASGRB":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
                             "TYPECONS":2,"TYCONS2":"NA"}]')
   get_joint_risks(dt)
   return(invisible())
