@@ -238,8 +238,10 @@ get_joint_risks <- function(dt) {
 #' @param superrez A character string. Default to paste0(prefix, "SUPERREZ").
 #' @param toitstru A character string. Default to paste0(prefix, "TOITSTRU").
 #' @param umessup2 A character string. Default to paste0(prefix, "UMESSUP2").
-#' @return A data.table with paste0(prefix, "POLYINDX") column. If the risk has no
-#' appropriate geolocation information, index will be NA.
+#' @param mttotras A character string. Default to paste0(prefix, "MTTOTRAS").
+#' @return A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLYMAXRISASGRB"),
+#' paste0(prefix,"POLYSUMMTTOTRAS") columns. If the risk has no appropriate geolocation
+#' information, index will be NA and other values will just be the individual risk values.
 #' @importFrom sf st_cast st_intersects st_union
 #' @examples
 #' \dontrun{
@@ -251,7 +253,9 @@ get_joint_risks <- function(dt) {
 #'                    MCAAF_ID = 2),
 #'     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
 #'   )
-#' append_polygons_idx(dt, prefix = "PROD_")
+#' append_polygons_idx(dt, prefix = "PROD_", comaubat = "PROD_14367")
+#' # or use internal extract function
+#' append_polygons_idx(get_risks_cgen())
 #' }
 append_polygons_idx <- function(dt,
                                 prefix = "",
@@ -269,19 +273,20 @@ append_polygons_idx <- function(dt,
                                 rvextbri = paste0(prefix, "RVEXTBRI"),
                                 superrez = paste0(prefix, "SUPERREZ"),
                                 toitstru = paste0(prefix, "TOITSTRU"),
-                                umessup2 = paste0(prefix, "UMESSUP2")) {
+                                umessup2 = paste0(prefix, "UMESSUP2"),
+                                mttotras = paste0(prefix, "MTTOTRAS")) {
   source <- copy(dt[, c(affectat, comaubat, latitcom, longicom, murstruc, plancher,
                             pregeoco, princfus, resaufeu, risasgrb, rvextbet,
-                            rvextbri, superrez, toitstru, umessup2), with = FALSE])
+                            rvextbri, superrez, toitstru, umessup2, mttotras), with = FALSE])
   setnames(source,
            c(affectat, comaubat, latitcom, longicom, murstruc, plancher, pregeoco, princfus,
-             resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessup2),
+             resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessup2, mttotras),
            c("AFFECTAT", "COMAUBAT", "LATITCOM", "LONGICOM", "MURSTRUC", "PLANCHER", "PREGEOCO", "PRINCFUS",
-             "RESAUFEU", "RISASGRB", "RVEXTBET", "RVEXTBRI", "SUPERREZ", "TOITSTRU", "UMESSUP2"))
+             "RESAUFEU", "RISASGRB", "RVEXTBET", "RVEXTBRI", "SUPERREZ", "TOITSTRU", "UMESSUP2", "MTTOTRAS"))
   set(source, j = "MERGEKEY", value = seq_len(nrow(source)))
-  jointrisk:::append_typecons(source)
-  jointrisk:::calculate_radius(source)
-  polygons <- jointrisk:::create_polygons(source)
+  append_typecons(source)
+  calculate_radius(source)
+  polygons <- create_polygons(source)
   pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
   idx <- sf::st_intersects(polygons, pockets)
   setDT(polygons)
@@ -289,9 +294,21 @@ append_polygons_idx <- function(dt,
   setDT(dt)
   set(dt,
       i = .subset2(polygons, "MERGEKEY"),
-      j = paste0(prefix, "POLYINDX"),
+      j = "POLYINDX",
       value = .subset2(polygons, "POLYINDX"))
-  return(invisible())
+  suppressWarnings(
+    infosup <- dt[!is.na(POLYINDX),
+                  list(POLYMAXRISASGRB = max(get(risasgrb), na.rm = TRUE),
+                       POLYSUMMTTOTRAS = sum(get(mttotras), na.rm = TRUE)),
+                  by = POLYINDX])
+  setDT(infosup, key = "POLYINDX")
+  setDT(dt     , key = "POLYINDX")
+  pos <- which(!names(infosup) %chin% names(dt))
+  dt[, names(infosup)[pos] := infosup[dt[, list(POLYINDX)], pos, with = FALSE]]
+  dt[is.na(POLYINDX), c("POLYMAXRISASGRB", "POLYSUMMTTOTRAS") := list(get(risasgrb), get(mttotras))]
+  nm <- c("POLYINDX", "POLYMAXRISASGRB", "POLYSUMMTTOTRAS")
+  setnames(dt, nm, paste0(prefix, nm), skip_absent = TRUE)
+  return(dt)
 }
 
 #' @export
@@ -310,7 +327,7 @@ get_risks_cgen <- function() {
     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
   )
   data.table::setnames(dt, gsub("PROD_", "", names(dt)))
-  data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT"), c("INTE_NO", "PRCH_ID", "PROD_CODE"), skip_absent = TRUE)
+  data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT", "14367"), c("INTE_NO", "PRCH_ID", "PROD_CODE", "COMAUBAT"), skip_absent = TRUE)
   numcol  <- c("SUPERREZ", "RVEXTBET", "RVEXTBRI", "PRINCFUS", "MTTOTRAS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
   return(dt[,list(INTE_NO, POAS_NO, PRCH_NO, PRCH_ID, PROD_CODE, COMAUBAT,
