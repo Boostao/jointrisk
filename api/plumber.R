@@ -23,6 +23,6 @@ function() {
 function(dt) {
     return(
       list("version" = jointrisk:::pkgV,
-           "results" = get_joint_risks(dt))
+           "results" = get_joint_risks(dt, polygons))
     )
 }

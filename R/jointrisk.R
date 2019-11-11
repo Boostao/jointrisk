@@ -351,7 +351,7 @@ load_risk_cgen <- function() {
 
   dt <- data.table::dcast(dt, INTE_NO + POAS_NO + PRCH_NO + PRCH_ID + PROD_CODE ~ QUESTION, value.var = "REPONSE")
 
-  numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS")
+  numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
 
   return(dt)
