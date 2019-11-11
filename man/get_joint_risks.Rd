@@ -4,10 +4,12 @@
 \alias{get_joint_risks}
 \title{Polygon blaster}
 \usage{
-get_joint_risks(dt)
+get_joint_risks(dt, polygons)
 }
 \arguments{
 \item{dt}{A data.frame with the following}
+
+\item{polygons}{A data.frame to compare dt to.}
 }
 \value{
 PRCH_ID and POLYGON_ID with package version.
@@ -19,9 +21,8 @@ the precomputed pockets.
 \examples{
 \dontrun{
 dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUBAT":"NA",
-"AFFECTAT":"C8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
-"PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
-"UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
-get_polygons_id(dt)
+"AFFECTAT":"C8112","LATITCOM":"46.77418", "LONGICOM":"-71.30196",
+"PRINCFUS":4,"SUPERREZ":1800, "UMESSUPE":"PI","TYPECONS":5}]')
+get_joint_risks(dt, polygons)
 }
 }

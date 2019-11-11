@@ -14,7 +14,7 @@ append_polygons_idx(dt, prefix = "", affectat = paste0(prefix,
   "RISASGRB"), rvextbet = paste0(prefix, "RVEXTBET"),
   rvextbri = paste0(prefix, "RVEXTBRI"), superrez = paste0(prefix,
   "SUPERREZ"), toitstru = paste0(prefix, "TOITSTRU"),
-  umessup2 = paste0(prefix, "UMESSUP2"), mttotras = paste0(prefix,
+  umessupe = paste0(prefix, "UMESSUPE"), mttotras = paste0(prefix,
   "MTTOTRAS"))
 }
 \arguments{
@@ -52,13 +52,13 @@ that field. Field value are equivalence value (COOP_ID 11).}
 
 \item{toitstru}{A character string. Default to paste0(prefix, "TOITSTRU").}
 
-\item{umessup2}{A character string. Default to paste0(prefix, "UMESSUP2").}
+\item{umessupe}{A character string. Default to paste0(prefix, "UMESSUPE").}
 
 \item{mttotras}{A character string. Default to paste0(prefix, "MTTOTRAS").}
 }
 \value{
-A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLY_MAX_RISASGRB"),
-paste0(prefix,"POLY_SUM_MTTOTRAS") columns. If the risk has no appropriate geolocation
+A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLYMAXRISASGRB"),
+paste0(prefix,"POLYSUMMTTOTRAS") columns. If the risk has no appropriate geolocation
 information, index will be NA and other values will just be the individual risk values.
 }
 \description{
@@ -76,7 +76,5 @@ dt <- extractnetezza::get_policies(
     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
   )
 append_polygons_idx(dt, prefix = "PROD_", comaubat = "PROD_14367")
-# or use internal extract function
-append_polygons_idx(get_risks_cgen())
 }
 }

@@ -4,11 +4,13 @@
 \alias{update_polygons}
 \title{Obtain polygons}
 \usage{
-update_polygons(source)
+update_polygons(source, polygons = NULL)
 }
 \arguments{
 \item{source}{A data.table used to update the polygon. Use load_risk_cgen(file) or
 get_cgen_risk() (require extractnetezza).}
+
+\item{polygons}{A polygons ref to update from.}
 }
 \value{
 A data.table with PRCH_ID and POLYGON_ID.
