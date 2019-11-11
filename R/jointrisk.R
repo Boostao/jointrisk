@@ -50,13 +50,17 @@ calculate_radius <- function(dt) {
                   value = list({
                     # Insured risk property class construct
                     RISASGRB            <- .subset2(dt, "RISASGRB")
-                    nax                 <- which(is.na(RISASGRB))
-                    RISASGRB[nax]       <- RISASGRB_DEFAULT
+                    if (is.null(RISASGRB)) {
+                      RISASGRB <- rep(RISASGRB_DEFAULT, nrow(dt))
+                    } else {
+                      nax                 <- which(is.na(RISASGRB))
+                      RISASGRB[nax]       <- RISASGRB_DEFAULT
+                    }
                     RISASGRB_F          <- c(1L, 2L)[1L + as.integer(RISASGRB %chin% c("5", "6", "P"))]
 
                     COMAUBAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUBAT") %in% "O")]
                     AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "C6670")]
-                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUP2") %in% c("PI", "*", NA))
+                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUPE") %in% c("PI", "*", NA))
                     CONVERSION_F        <- c(1, 10.764)[M_OR_P_NA]
                     LOWERLIMIT_F        <- c(GRDFLRAREA_M_LIM, GRDFLRAREA_P_LIM)[M_OR_P_NA]
                     # Construction type construct
@@ -153,10 +157,9 @@ update_polygons <- function(source, polygons = NULL) {
 #' @examples
 #' \dontrun{
 #' dt <- jsonlite::fromJSON('[{"PRCH_ID":14543671,"COMAUBAT":"NA",
-#' "AFFECTAT":"C8112","LATITCOM":"45.6388","LONGICOM":"-73.8438",
-#' "PRINCFUS":4,"RISASGRB":"1","SUPERREZ":1800,
-#' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
-#' get_polygons_id(dt)
+#' "AFFECTAT":"C8112","LATITCOM":"46.77418", "LONGICOM":"-71.30196",
+#' "PRINCFUS":4,"SUPERREZ":1800, "UMESSUPE":"PI","TYPECONS":5}]')
+#' get_joint_risks(dt, polygons)
 #' }
 get_joint_risks <- function(dt, polygons) {
   if (nrow(polygons) == 0L) {
@@ -164,7 +167,7 @@ get_joint_risks <- function(dt, polygons) {
   } else {
     data.table::setDT(dt)
     required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM",
-                  "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS")
+                  "PRINCFUS", "SUPERREZ", "UMESSUPE", "TYPECONS")
     if (!all(required %chin% names(dt))) {
       notin <- required[!required %chin% names(dt)]
       stop(paste("Required fields", paste(notin, collapse = ", "), "not found"))
@@ -227,7 +230,7 @@ get_joint_risks <- function(dt, polygons) {
 #' @param rvextbri A character string. Default to paste0(prefix, "RVEXTBRI").
 #' @param superrez A character string. Default to paste0(prefix, "SUPERREZ").
 #' @param toitstru A character string. Default to paste0(prefix, "TOITSTRU").
-#' @param umessup2 A character string. Default to paste0(prefix, "UMESSUP2").
+#' @param umessupe A character string. Default to paste0(prefix, "UMESSUPE").
 #' @param mttotras A character string. Default to paste0(prefix, "MTTOTRAS").
 #' @return A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLYMAXRISASGRB"),
 #' paste0(prefix,"POLYSUMMTTOTRAS") columns. If the risk has no appropriate geolocation
@@ -244,8 +247,6 @@ get_joint_risks <- function(dt, polygons) {
 #'     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
 #'   )
 #' append_polygons_idx(dt, prefix = "PROD_", comaubat = "PROD_14367")
-#' # or use internal extract function
-#' append_polygons_idx(get_risks_cgen())
 #' }
 append_polygons_idx <- function(dt,
                                 prefix = "",
@@ -263,16 +264,16 @@ append_polygons_idx <- function(dt,
                                 rvextbri = paste0(prefix, "RVEXTBRI"),
                                 superrez = paste0(prefix, "SUPERREZ"),
                                 toitstru = paste0(prefix, "TOITSTRU"),
-                                umessup2 = paste0(prefix, "UMESSUP2"),
+                                umessupe = paste0(prefix, "UMESSUPE"),
                                 mttotras = paste0(prefix, "MTTOTRAS")) {
   source <- copy(dt[, c(affectat, comaubat, latitcom, longicom, murstruc, plancher,
                             pregeoco, princfus, resaufeu, risasgrb, rvextbet,
-                            rvextbri, superrez, toitstru, umessup2, mttotras), with = FALSE])
+                            rvextbri, superrez, toitstru, umessupe, mttotras), with = FALSE])
   setnames(source,
            c(affectat, comaubat, latitcom, longicom, murstruc, plancher, pregeoco, princfus,
-             resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessup2, mttotras),
+             resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessupe, mttotras),
            c("AFFECTAT", "COMAUBAT", "LATITCOM", "LONGICOM", "MURSTRUC", "PLANCHER", "PREGEOCO", "PRINCFUS",
-             "RESAUFEU", "RISASGRB", "RVEXTBET", "RVEXTBRI", "SUPERREZ", "TOITSTRU", "UMESSUP2", "MTTOTRAS"))
+             "RESAUFEU", "RISASGRB", "RVEXTBET", "RVEXTBRI", "SUPERREZ", "TOITSTRU", "UMESSUPE", "MTTOTRAS"))
   set(source, j = "MERGEKEY", value = seq_len(nrow(source)))
   append_typecons(source)
   calculate_radius(source)
@@ -314,16 +315,16 @@ get_risks_cgen <- function() {
     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
                    MLIAF_ID = 4,
                    MCAAF_ID = 2),
-    detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
+    detailid = c(140, 959, 971, 1082, 1083, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
   )
   data.table::setnames(dt, gsub("PROD_", "", names(dt)))
   data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT", "14367"), c("INTE_NO", "PRCH_ID", "PROD_CODE", "COMAUBAT"), skip_absent = TRUE)
   numcol  <- c("SUPERREZ", "RVEXTBET", "RVEXTBRI", "PRINCFUS", "MTTOTRAS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
+  append_typecons(dt)
   return(dt[,list(INTE_NO, POAS_NO, PRCH_NO, PRCH_ID, PROD_CODE, COMAUBAT,
-                  AFFECTAT, LATITCOM, LONGICOM, MTTOTRAS, MURSTRUC, PLANCHER,
-                  PREGEOCO, PRINCFUS, RESAUFEU, RISASGRB, RVEXTBET, RVEXTBRI,
-                  SUPERREZ, TOITSTRU, UMESSUP2)])
+                  AFFECTAT, LATITCOM, LONGICOM, MTTOTRAS, PREGEOCO, PRINCFUS,
+                  RISASGRB, SUPERREZ, UMESSUPE, TYPECONS)])
 }
 
 #' @export
@@ -362,7 +363,7 @@ load_risk_cgen <- function() {
 #' @export
 warmup <- function(polygons) {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
-                            "LONGICOM":"-71.30196","PRINCFUS":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
+                            "LONGICOM":"-71.30196","PRINCFUS":"NA","SUPERREZ":"NA","UMESSUPE":"PI",
                             "TYPECONS":2}]')
   get_joint_risks(dt, polygons)
   return(invisible())

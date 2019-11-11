@@ -1,4 +1,4 @@
-options(jointrisk.riskfile = "soussnnn.csv")
+options(jointrisk.riskfile = "souss004.csv")
 library(jointrisk)
 
 polygons <- update_polygons(load_risk_cgen())
