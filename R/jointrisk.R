@@ -9,7 +9,6 @@ TYPECONS_x_PRINCFUS[, 5L:7L] <- c(4L, 4L, 8L, 8L, 12L, 12L)
 TYPECONS_x_PRINCFUS[, 8L:10L] <- c(8L, 8L, 16L, 16L, 25L, 25L)
 
 pkgV <- as.character(packageVersion("jointrisk"))
-.inmempoly <- data.frame()
 
 #' @title Append TYPECONS
 #' @description Append TYPECONS, TYCONS2 compo at the end of input table.
@@ -31,6 +30,9 @@ append_typecons <- function(dt) {
   dt[compo$COTYCON2,
      on = "RESAUFEU==RESAUFEU",
      `:=`("TYCONS2" = as.integer(TYCONS2))]
+  
+  dt[is.na(TYPECONS), "TYPECONS" := TYCONS2]
+  dt[, "TYCONS2" := NULL]
 
   return(dt)
 
@@ -59,11 +61,8 @@ calculate_radius <- function(dt) {
                     LOWERLIMIT_F        <- c(GRDFLRAREA_M_LIM, GRDFLRAREA_P_LIM)[M_OR_P_NA]
                     # Construction type construct
                     TYPECONS            <- .subset2(dt, "TYPECONS")
-                    TYCONS2             <- .subset2(dt, "TYCONS2")
                     nax                 <- which(is.na(TYPECONS))
-                    nay                 <- which(is.na(TYCONS2[nax]))
-                    TYPECONS[nax]       <- TYCONS2[nax]
-                    TYPECONS[nax[nay]]  <- TYPECONS_DEFAULT
+                    TYPECONS[nax]       <- TYPECONS_DEFAULT
                     # Fire underwriters survey fire protectection zone
                     PRINCFUS            <- .subset2(dt, "PRINCFUS")
                     nax                 <- which(is.na(PRINCFUS))
@@ -83,15 +82,6 @@ calculate_radius <- function(dt) {
                   }))
 }
 
-#' Change the loaded in memory polygons
-#' @param pockets A character string, name of netezza catalog.
-set_binding <- function(binding, value) {
-  e <- environment()
-  unlockBinding(binding, parent.env(e))
-  assign(binding, value, parent.env(e))
-  lockBinding(binding, parent.env(e))
-}
-
 #' @title Polygon-o-tron
 #' @description This function takes a data containing IDs, radius and geocode and creates pockets
 #' for neighbors risks. It returns a data containing the pocket number for each PRCH_ID
@@ -100,11 +90,11 @@ set_binding <- function(binding, value) {
 #' @importFrom data.table set %chin% setkey as.data.table rbindlist
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
 create_polygons <- function(dt) {
-
- polygons <- dt[!is.na(LATITCOM) &
-                !is.na(LONGICOM) &
-                PREGEOCO %chin% c("POINTADDRESS","STREETADDRESS","SUBADDRESS")]
-
+ dt <- as.data.frame(dt)
+ polygons <- dt[!is.na(dt$LATITCOM) &
+                !is.na(dt$LONGICOM) &
+                dt$PREGEOCO %in% c("POINTADDRESS","STREETADDRESS","SUBADDRESS"),]
+ rm(dt)
  polygons <- sf::st_as_sf(polygons,
                           coords = c("LONGICOM", "LATITCOM"),
                           crs = "+proj=longlat +datum=WGS84")
@@ -126,7 +116,7 @@ create_polygons <- function(dt) {
      ))
  # and back into an sf
  attr(polygons, "class") <- classes
-
+ gc()
  return(polygons)
 
 }
@@ -136,20 +126,19 @@ create_polygons <- function(dt) {
 #' @description This function is used to update and return polygon table.
 #' @param source A data.table used to update the polygon. Use load_risk_cgen(file) or
 #' get_cgen_risk() (require extractnetezza).
+#' @param polygons A polygons ref to update from.
 #' @return A data.table with PRCH_ID and POLYGON_ID.
-update_polygons <- function(source) {
+update_polygons <- function(source, polygons = NULL) {
   tick <- Sys.time()
-  prev_npol <- nrow(.inmempoly)
-  append_typecons(source)
+  prev_npol <- if (is.null(polygons)) {0L} else {nrow(polygons)}
   calculate_radius(source)
   polygons <- create_polygons(source)
-  set_binding(".inmempoly", polygons)
-  next_npol <- nrow(.inmempoly)
+  next_npol <- nrow(polygons)
   tock <- Sys.time() - tick
   cat("Polygons definition updated on ", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME")), collapse = ""),
       " in ", format(unclass(tock), digits = 4)," ", attr(tock, "units"),". Previous definition had ",
       prev_npol," polygons, current has ", next_npol," polygons.\n", sep = "")
-  return(invisible())
+  return(polygons)
 }
 
 #' @export
@@ -157,6 +146,7 @@ update_polygons <- function(source) {
 #' @description This function return polygon id from an input data.table using
 #' the precomputed pockets.
 #' @param dt A data.frame with the following
+#' @param polygons A data.frame to compare dt to.
 #' @return PRCH_ID and POLYGON_ID with package version.
 #' @importFrom data.table set setDT %chin% rbindlist copy
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
@@ -168,13 +158,13 @@ update_polygons <- function(source) {
 #' "UMESSUP2":"PI","TYPECONS":5,"TYCONS2":"NA","RISKRADIUS":18.2958}]')
 #' get_polygons_id(dt)
 #' }
-get_joint_risks <- function(dt) {
-  if (nrow(.inmempoly) == 0L) {
+get_joint_risks <- function(dt, polygons) {
+  if (nrow(polygons) == 0L) {
     res <- list("WARNING" = "Empty polygons definition.")
   } else {
     data.table::setDT(dt)
     required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM",
-                  "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS", "TYCONS2")
+                  "PRINCFUS", "RISASGRB", "SUPERREZ", "UMESSUP2", "TYPECONS")
     if (!all(required %chin% names(dt))) {
       notin <- required[!required %chin% names(dt)]
       stop(paste("Required fields", paste(notin, collapse = ", "), "not found"))
@@ -186,11 +176,11 @@ get_joint_risks <- function(dt) {
     dt_sp <- sf::st_transform(dt_sp, 3488)
     newrisk <- sf::st_buffer(dt_sp, dist = .subset2(dt, "RISKRADIUS"))
     b <- as.list(sf::st_bbox(newrisk))
-    poly_idx <- which(.subset2(b, "xmin") < .subset2(.inmempoly, "xmax") &
-                      .subset2(b, "xmax") > .subset2(.inmempoly, "xmin") &
-                      .subset2(b, "ymin") < .subset2(.inmempoly, "ymax") &
-                      .subset2(b, "ymax") > .subset2(.inmempoly, "ymin"))
-    matches <- sf::st_intersects(newrisk, .inmempoly[poly_idx, with = FALSE])
+    poly_idx <- which(.subset2(b, "xmin") < .subset2(polygons, "xmax") &
+                      .subset2(b, "xmax") > .subset2(polygons, "xmin") &
+                      .subset2(b, "ymin") < .subset2(polygons, "ymax") &
+                      .subset2(b, "ymax") > .subset2(polygons, "ymin"))
+    matches <- sf::st_intersects(newrisk, polygons[poly_idx, with = FALSE])
 
     # Formuler une reponse de retour qui fait du sens
     # Enlever les risques conjoints avec lui-même (meme PRCH_ID ou POL_NO, PRCH_NO)
@@ -200,9 +190,9 @@ get_joint_risks <- function(dt) {
     prch_id <- .subset2(dt, "PRCH_ID")
 
     res <- lapply(seq_len(length(matches)), function(x) {
-      self_idx <- which(prch_id[x] == .subset2(.inmempoly, "PRCH_ID"))
+      self_idx <- which(prch_id[x] == .subset2(polygons, "PRCH_ID"))
       jr_idx <- poly_idx[matches[[x]]]
-      jr <- setDT(copy(.inmempoly[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
+      jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
       tiv <- sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE)
       maxgrb <- max(.subset2(jr, "RISASGRB"), na.rm = TRUE)
       list(
@@ -360,7 +350,7 @@ load_risk_cgen <- function() {
 
   dt <- data.table::dcast(dt, INTE_NO + POAS_NO + PRCH_NO + PRCH_ID + PROD_CODE ~ QUESTION, value.var = "REPONSE")
 
-  numcol  <- c("SUPERREZ", "RVEXTBET", "RVEXTBRI", "PRINCFUS", "MTTOTRAS")
+  numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
 
   return(dt)
@@ -370,10 +360,10 @@ load_risk_cgen <- function() {
 #' Warmup vectorizer functions for optimized runs.
 #' @importFrom jsonlite fromJSON
 #' @export
-warmup <- function() {
+warmup <- function(polygons) {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
-                            "LONGICOM":"-71.30196","PRINCFUS":"NA","RISASGRB":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
-                            "TYPECONS":2,"TYCONS2":"NA"}]')
-  get_joint_risks(dt)
+                            "LONGICOM":"-71.30196","PRINCFUS":"NA","SUPERREZ":"NA","UMESSUP2":"PI",
+                            "TYPECONS":2}]')
+  get_joint_risks(dt, polygons)
   return(invisible())
 }

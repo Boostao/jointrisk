@@ -1,8 +1,8 @@
 options(jointrisk.riskfile = "soussnnn.csv")
 library(jointrisk)
 
-update_polygons(load_risk_cgen())
-warmup()
+polygons <- update_polygons(load_risk_cgen())
+warmup(polygons)
 
 #* Health check
 #* @get /

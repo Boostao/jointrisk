@@ -10,5 +10,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.6)
 Imports: data.table, sf (>= 0.7.7), jsonlite
-Sugggest: extractnetezza
+Suggests: 
+    extractnetezza,
+    testthat (>= 2.1.0)
 RoxygenNote: 6.1.1
