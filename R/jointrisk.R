@@ -60,7 +60,7 @@ calculate_radius <- function(dt) {
 
                     COMAUBAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUBAT") %in% "O")]
                     AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "C6670")]
-                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUPE") %in% c("PI", "*", NA))
+                    M_OR_P_NA           <- 1L + as.integer(.subset2(dt, "UMESSUPE") %in% c("PI", "*", NA, ""))
                     CONVERSION_F        <- c(1, 10.764)[M_OR_P_NA]
                     LOWERLIMIT_F        <- c(GRDFLRAREA_M_LIM, GRDFLRAREA_P_LIM)[M_OR_P_NA]
                     # Construction type construct
@@ -172,6 +172,8 @@ get_joint_risks <- function(dt, polygons) {
       notin <- required[!required %chin% names(dt)]
       stop(paste("Required fields", paste(notin, collapse = ", "), "not found"))
     }
+    numcol  <- c("SUPERREZ", "PRINCFUS", "TYPECONS")
+    suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
     calculate_radius(dt)
     dt_sp <- sf::st_as_sf(dt,
                           coords = c("LONGICOM", "LATITCOM"),
