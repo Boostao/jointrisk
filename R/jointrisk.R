@@ -339,7 +339,7 @@ load_risk_cgen <- function() {
   file <- getOption("jointrisk.riskfile")
 
   dt <- data.table::fread(file, header = FALSE,
-                          col.names = c("POAS_NO", "INTE_NO", "PRCH_NO", "PROD_CODE", "PRCH_ID", "VEPC_ID", "QUESTION", "REPONSE", "VAAT_ID"))
+                          col.names = c("POAS_NO", "INTE_NO", "PRCH_NO", "PROD_CODE", "PRCH_ID", "VEPC_ID", "QUESTION", "REPONSE"))
   data.table::setDT(dt, key = "VEPC_ID")
 
   # Check that there is only one VEPC_ID per PRCH_ID combination
