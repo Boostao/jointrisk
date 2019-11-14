@@ -13,7 +13,8 @@ function() {
 #* Update polygons
 #* @get /update_polygons
 function() {
-    return(update_polygons(load_risk_cgen()))
+    polygons <- update_polygons(load_risk_cgen()) 
+    return("Polygons updated")
 }
 
 #* Get polygons id
