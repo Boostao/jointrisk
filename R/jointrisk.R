@@ -246,7 +246,7 @@ get_joint_risks <- function(dt, polygons) {
 #'     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
 #'                    MLIAF_ID = 4,
 #'                    MCAAF_ID = 2),
-#'     detailid = c(140, 959, 971, 1083, 1092, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
+#'     detailid = c(140, 959, 971, 1082, 1083, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
 #'   )
 #' append_polygons_idx(dt, prefix = "PROD_", comaubat = "PROD_14367")
 #' }
@@ -270,7 +270,7 @@ append_polygons_idx <- function(dt,
                                 mttotras = paste0(prefix, "MTTOTRAS")) {
   source <- copy(dt[, c(affectat, comaubat, latitcom, longicom, murstruc, plancher,
                             pregeoco, princfus, resaufeu, risasgrb, rvextbet,
-                            rvextbri, superrez, toitstru, umessupe, mttotras), with = FALSE])
+                            rvextbri, superrez, toitstru, umessupe, mttotras, "MINTE_ID", "PRODUIT"), with = FALSE])
   setnames(source,
            c(affectat, comaubat, latitcom, longicom, murstruc, plancher, pregeoco, princfus,
              resaufeu, risasgrb, rvextbet, rvextbri, superrez, toitstru, umessupe, mttotras),
@@ -301,7 +301,7 @@ append_polygons_idx <- function(dt,
   dt[is.na(POLYINDX), c("POLYMAXRISASGRB", "POLYSUMMTTOTRAS") := list(get(risasgrb), get(mttotras))]
   nm <- c("POLYINDX", "POLYMAXRISASGRB", "POLYSUMMTTOTRAS")
   setnames(dt, nm, paste0(prefix, nm), skip_absent = TRUE)
-  return(dt)
+  return(invisible(list("source" = source, "pockets" = pockets)))
 }
 
 #' @export
