@@ -104,20 +104,16 @@ create_polygons <- function(dt) {
                           crs = "+proj=longlat +datum=WGS84")
  polygons <- sf::st_transform(polygons, 3488)
  polygons <- sf::st_buffer(polygons, dist = .subset2(polygons, "RISKRADIUS"))
+ pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
+ idx <- sf::st_intersects(polygons, pockets)
  classes <- attr(polygons, "class")
  # reclass as data.table to allow data.table operation
  setDT(polygons)
- data.table::set(polygons,
-     j = c("xmin", "ymin", "xmax", "ymax"),
-     value = as.list(data.table::rbindlist(
-       lapply(
-         .subset2(polygons, "geometry"),
-         function(x) {
-           as.list(sf::st_bbox(x))
-           }
-         )
-       )
-     ))
+ data.table::set(
+   polygons,
+   j = c("xmin", "ymin", "xmax", "ymax"),
+   value = as.list(data.table::rbindlist(lapply(pockets, function(x) as.list(sf::st_bbox(x))))[unlist(idx)])
+ )
  # and back into an sf
  attr(polygons, "class") <- classes
  gc()
