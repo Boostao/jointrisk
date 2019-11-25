@@ -114,6 +114,11 @@ create_polygons <- function(dt) {
    j = c("xmin", "ymin", "xmax", "ymax"),
    value = as.list(data.table::rbindlist(lapply(pockets, function(x) as.list(sf::st_bbox(x))))[unlist(idx)])
  )
+ data.table::set(
+   polygons,
+   j = "geometry",
+   value = pockets[unlist(idx)]
+ )
  # and back into an sf
  attr(polygons, "class") <- classes
  gc()
@@ -194,8 +199,8 @@ get_joint_risks <- function(dt, polygons) {
       self_idx <- which(prch_id[x] == .subset2(polygons, "PRCH_ID"))
       jr_idx <- poly_idx[matches[[x]]]
       jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
-      tiv <- sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE)
-      maxgrb <- max(.subset2(jr, "RISASGRB"), na.rm = TRUE)
+      tiv <- suppressWarnings(sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE))
+      maxgrb <- suppressWarnings(max(.subset2(jr, "RISASGRB"), na.rm = TRUE))
       list(
         "PRCH_ID" = prch_id[x],
         "jointRiskTotalInsuredValue" = tiv,
