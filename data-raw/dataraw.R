@@ -1,6 +1,6 @@
 ## code to prepare `dataraw` dataset goes here
-library(extractnetezza)
-options(extractnetezza.context = 11)
+library(extraw)
+options(ext.context = 11)
 compo <- get_compo(compo = c("COTYCONS", "COTYCON2"), inforce = TRUE)
 
 usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
@@ -23,7 +23,7 @@ library(htmltools)
 library(jointrisk)
 library(sf)
 
-dt <- extractnetezza::get_policies(
+dt <- extraw::get_policies(
     inforce = TRUE,
     partial = "PRO",
     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
