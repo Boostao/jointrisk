@@ -130,7 +130,7 @@ create_polygons <- function(dt) {
 #' @title Obtain polygons
 #' @description This function is used to update and return polygon table.
 #' @param source A data.table used to update the polygon. Use load_risk_cgen(file) or
-#' get_cgen_risk() (require extractnetezza).
+#' get_cgen_risk() (require extraw).
 #' @param polygons A polygons ref to update from.
 #' @return A data.table with PRCH_ID and POLYGON_ID.
 update_polygons <- function(source, polygons = NULL) {
@@ -241,7 +241,7 @@ get_joint_risks <- function(dt, polygons) {
 #' @importFrom sf st_cast st_intersects st_union
 #' @examples
 #' \dontrun{
-#' dt <- extractnetezza::get_policies(
+#' dt <- extraw::get_policies(
 #'     inforce = TRUE,
 #'     partial = "PRO",
 #'     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
@@ -306,13 +306,13 @@ append_polygons_idx <- function(dt,
 }
 
 #' @export
-#' @title Get risks CGEN from extractnetezza
+#' @title Get risks CGEN from extraw
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
 #' @importFrom data.table setnames
 get_risks_cgen <- function() {
-  options(extractnetezza.context = 11)
-  dt <- extractnetezza::get_policies(
+  options(extraw.context = 11)
+  dt <- extraw::get_policies(
     inforce = TRUE,
     partial = "PRO",
     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),

@@ -1,5 +1,5 @@
 library(testthat)
 library(jointrisk)
-library(extractnetezza)
+library(extraw)
 
 test_check("jointrisk")

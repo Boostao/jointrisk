@@ -2,7 +2,7 @@
 % Please edit documentation in R/jointrisk.R
 \name{get_risks_cgen}
 \alias{get_risks_cgen}
-\title{Get risks CGEN from extractnetezza}
+\title{Get risks CGEN from extraw}
 \usage{
 get_risks_cgen()
 }

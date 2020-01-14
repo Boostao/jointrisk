@@ -8,7 +8,7 @@ update_polygons(source, polygons = NULL)
 }
 \arguments{
 \item{source}{A data.table used to update the polygon. Use load_risk_cgen(file) or
-get_cgen_risk() (require extractnetezza).}
+get_cgen_risk() (require extraw).}
 
 \item{polygons}{A polygons ref to update from.}
 }

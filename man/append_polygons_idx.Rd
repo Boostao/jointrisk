@@ -67,7 +67,7 @@ Use the others parameters for custom input names but all of .
 }
 \examples{
 \dontrun{
-dt <- extractnetezza::get_policies(
+dt <- extraw::get_policies(
     inforce = TRUE,
     partial = "PRO",
     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
