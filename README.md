@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.1.0
+
+Cut off streets for polygons using HERE Navstreets dataset.
+
 # 1.0.2
 
 Condition modified for UMESSUPE to 

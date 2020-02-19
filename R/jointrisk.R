@@ -86,14 +86,63 @@ calculate_radius <- function(dt) {
                   }))
 }
 
+#' @title Add buffer and remove streets polygons
+#' @description This function remove streets from an sf table of POINTS polygons.
+#' @return An sf object
+#' @param polys An sf object of POLYGON.
+#' @param streets An sf object of LINESTRING with LANE_RADIUS.
+#' @importFrom data.table setDT set rbindlist
+#' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
+buff_and_remove_streets <- function(polys, streets) {
+ pts <- polys$geometry
+ polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
+ cls_ori <- attr(polys, "class"); setDT(polys);
+ data.table::set(
+   polys,
+   j = c("xmin", "ymin", "xmax", "ymax"),
+   value = as.list(data.table::rbindlist(lapply(polys$geometry, function(x) as.list(sf::st_bbox(x)))))
+ )
+ xmax <- .subset2(streets, "xmax"); xmin <- .subset2(streets, "xmin")
+ ymax <- .subset2(streets, "ymax"); ymin <- .subset2(streets, "ymin")
+ for (i in 1L:nrow(polys)) {
+   poly1 <- polys[i,]
+   area_streets <- streets[which(.subset2(poly1, "xmin") < xmax &
+                                 .subset2(poly1, "xmax") > xmin &
+                                 .subset2(poly1, "ymin") < ymax &
+                                 .subset2(poly1, "ymax") > ymin),]
+   new_geo <- sf::st_cast(
+                sf::st_difference(
+                  poly1$geometry,
+                  sf::st_union(
+                    sf::st_buffer(
+                      area_streets$geometry,
+                      dist = 2L * .subset2(area_streets, "LANE_RADIUS")
+                    )
+                  )
+                )
+              , "POLYGON")
+   new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
+   data.table::set(
+     polys,
+     i = i,
+     j = "geometry",
+     value = list("geometry" = new_geo)
+   )
+ }
+ attr(polys, "class") <- cls_ori
+ return(polys)
+}
+
 #' @title Polygon-o-tron
 #' @description This function takes a data containing IDs, radius and geocode and creates pockets
 #' for neighbors risks. It returns a data containing the pocket number for each PRCH_ID
 #' @param dt A data.table containing required fields.
+#' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return A data.table.
 #' @importFrom data.table set %chin% setkey as.data.table rbindlist
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
-create_polygons <- function(dt) {
+create_polygons <- function(dt, streets) {
+ on.exit(gc())
  dt <- as.data.frame(dt)
  polygons <- dt[!is.na(dt$LATITCOM) &
                 !is.na(dt$LONGICOM) &
@@ -103,7 +152,7 @@ create_polygons <- function(dt) {
                           coords = c("LONGICOM", "LATITCOM"),
                           crs = "+proj=longlat +datum=WGS84")
  polygons <- sf::st_transform(polygons, 3488)
- polygons <- sf::st_buffer(polygons, dist = .subset2(polygons, "RISKRADIUS"))
+ polygons <- buff_and_remove_streets(polygons, streets)
  pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
  idx <- sf::st_intersects(polygons, pockets)
  classes <- attr(polygons, "class")
@@ -121,7 +170,6 @@ create_polygons <- function(dt) {
  )
  # and back into an sf
  attr(polygons, "class") <- classes
- gc()
  return(polygons)
 
 }
@@ -132,12 +180,13 @@ create_polygons <- function(dt) {
 #' @param source A data.table used to update the polygon. Use load_risk_cgen(file) or
 #' get_cgen_risk() (require extraw).
 #' @param polygons A polygons ref to update from.
+#' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return A data.table with PRCH_ID and POLYGON_ID.
-update_polygons <- function(source, polygons = NULL) {
+update_polygons <- function(source, polygons = NULL, streets = NULL) {
   tick <- Sys.time()
   prev_npol <- if (is.null(polygons)) {0L} else {nrow(polygons)}
   calculate_radius(source)
-  polygons <- create_polygons(source)
+  polygons <- create_polygons(source, streets)
   next_npol <- nrow(polygons)
   tock <- Sys.time() - tick
   cat("Polygons definition updated on ", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME")), collapse = ""),
@@ -152,6 +201,7 @@ update_polygons <- function(source, polygons = NULL) {
 #' the precomputed pockets.
 #' @param dt A data.frame with the following
 #' @param polygons A data.frame to compare dt to.
+#' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return PRCH_ID and POLYGON_ID with package version.
 #' @importFrom data.table set setDT %chin% rbindlist copy
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
@@ -162,7 +212,7 @@ update_polygons <- function(source, polygons = NULL) {
 #' "PRINCFUS":4,"SUPERREZ":1800, "UMESSUPE":"PI","TYPECONS":5}]')
 #' get_joint_risks(dt, polygons)
 #' }
-get_joint_risks <- function(dt, polygons) {
+get_joint_risks <- function(dt, polygons, streets) {
   if (nrow(polygons) == 0L) {
     res <- list("WARNING" = "Empty polygons definition.")
   } else {
@@ -180,7 +230,7 @@ get_joint_risks <- function(dt, polygons) {
                           coords = c("LONGICOM", "LATITCOM"),
                           crs = "+proj=longlat +datum=WGS84")
     dt_sp <- sf::st_transform(dt_sp, 3488)
-    newrisk <- sf::st_buffer(dt_sp, dist = .subset2(dt, "RISKRADIUS"))
+    newrisk <- buff_and_remove_streets(dt_sp, streets)
     b <- as.list(sf::st_bbox(newrisk))
     poly_idx <- which(.subset2(b, "xmin") < .subset2(polygons, "xmax") &
                       .subset2(b, "xmax") > .subset2(polygons, "xmin") &
@@ -235,6 +285,7 @@ get_joint_risks <- function(dt, polygons) {
 #' @param toitstru A character string. Default to paste0(prefix, "TOITSTRU").
 #' @param umessupe A character string. Default to paste0(prefix, "UMESSUPE").
 #' @param mttotras A character string. Default to paste0(prefix, "MTTOTRAS").
+#' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLYMAXRISASGRB"),
 #' paste0(prefix,"POLYSUMMTTOTRAS") columns. If the risk has no appropriate geolocation
 #' information, index will be NA and other values will just be the individual risk values.
@@ -268,7 +319,8 @@ append_polygons_idx <- function(dt,
                                 superrez = paste0(prefix, "SUPERREZ"),
                                 toitstru = paste0(prefix, "TOITSTRU"),
                                 umessupe = paste0(prefix, "UMESSUPE"),
-                                mttotras = paste0(prefix, "MTTOTRAS")) {
+                                mttotras = paste0(prefix, "MTTOTRAS"),
+                                streets) {
   source <- copy(dt[, c(affectat, comaubat, latitcom, longicom, murstruc, plancher,
                             pregeoco, princfus, resaufeu, risasgrb, rvextbet,
                             rvextbri, superrez, toitstru, umessupe, mttotras, "MINTE_ID", "PRODUIT"), with = FALSE])
@@ -280,7 +332,7 @@ append_polygons_idx <- function(dt,
   set(source, j = "MERGEKEY", value = seq_len(nrow(source)))
   append_typecons(source)
   calculate_radius(source)
-  polygons <- create_polygons(source)
+  polygons <- create_polygons(source, streets)
   pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
   idx <- sf::st_intersects(polygons, pockets)
   setDT(polygons)
@@ -318,7 +370,8 @@ get_risks_cgen <- function() {
     filters = list(MPROD_ID = c(2552251, 1071124, 1071125, 1071122),
                    MLIAF_ID = 4,
                    MCAAF_ID = 2),
-    detailid = c(140, 959, 971, 1082, 1083, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661)
+    detailid = c(140, 959, 971, 1082, 1083, 9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661),
+    denormalize = TRUE
   )
   data.table::setnames(dt, gsub("PROD_", "", names(dt)))
   data.table::setnames(dt, c("MINTE_ID", "MPRCH_ID", "PRODUIT", "14367"), c("INTE_NO", "PRCH_ID", "PROD_CODE", "COMAUBAT"), skip_absent = TRUE)
@@ -364,10 +417,10 @@ load_risk_cgen <- function() {
 #' Warmup vectorizer functions for optimized runs.
 #' @importFrom jsonlite fromJSON
 #' @export
-warmup <- function(polygons) {
+warmup <- function(polygons, streets) {
   dt <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
                             "LONGICOM":"-71.30196","PRINCFUS":"NA","SUPERREZ":"NA","UMESSUPE":"PI",
                             "TYPECONS":2}]')
-  get_joint_risks(dt, polygons)
+  get_joint_risks(dt, polygons, streets)
   return(invisible())
 }
