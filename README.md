@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.1.1
+
+Split buff_and_remove_streets into an API version and a batch optimized version.
+
 # 1.1.0
 
 Cut off streets for polygons using HERE Navstreets dataset.

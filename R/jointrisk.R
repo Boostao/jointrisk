@@ -1,7 +1,7 @@
 # Constant values
 TYPECONS_DEFAULT <- 6L;   RISASGRB_DEFAULT <- "4";  SUPERREZ_DEFAULT <- 1L
 PRINCFUS_DEFAULT <- 7L;   RADIUSMT_DEFAULT <- 9L;   GRDFLRAREA_M_LIM <- 10L
-GRDFLRAREA_P_LIM <- 200L; RADIUS_MFAD <- 2L
+GRDFLRAREA_P_LIM <- 200L; RADIUS_MFAD <- 2L;        LANE_WIDTH <- 2L
 
 TYPECONS_x_PRINCFUS <- matrix(nrow = 6L, ncol = 10L)
 TYPECONS_x_PRINCFUS[, 1L:4L] <- c(3L, 3L, 6L, 6L, 9L, 9L)
@@ -94,6 +94,21 @@ calculate_radius <- function(dt) {
 #' @importFrom data.table setDT set rbindlist
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
 buff_and_remove_streets <- function(polys, streets) {
+  if (nrow(polys) < 200) {
+    return(buff_and_remove_streets_api(polys, streets))
+  } else {
+    return(buff_and_remove_streets_batch(polys, streets))
+  }
+}
+
+#' @title Add buffer and remove streets polygons API optimized version
+#' @description This function remove streets from an sf table of POINTS polygons.
+#' @return An sf object
+#' @param polys An sf object of POLYGON.
+#' @param streets An sf object of LINESTRING with LANE_RADIUS.
+#' @importFrom data.table setDT set rbindlist
+#' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
+buff_and_remove_streets_api <- function(polys, streets) {
  pts <- polys$geometry
  polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
  cls_ori <- attr(polys, "class"); setDT(polys);
@@ -106,31 +121,69 @@ buff_and_remove_streets <- function(polys, streets) {
  ymax <- .subset2(streets, "ymax"); ymin <- .subset2(streets, "ymin")
  for (i in 1L:nrow(polys)) {
    poly1 <- polys[i,]
-   area_streets <- streets[which(.subset2(poly1, "xmin") < xmax &
-                                 .subset2(poly1, "xmax") > xmin &
-                                 .subset2(poly1, "ymin") < ymax &
-                                 .subset2(poly1, "ymax") > ymin),]
-   new_geo <- sf::st_cast(
-                sf::st_difference(
-                  poly1$geometry,
-                  sf::st_union(
-                    sf::st_buffer(
-                      area_streets$geometry,
-                      dist = 2L * .subset2(area_streets, "LANE_RADIUS")
-                    )
+   idx <- which(.subset2(poly1, "xmin") < xmax &
+                .subset2(poly1, "xmax") > xmin &
+                .subset2(poly1, "ymin") < ymax &
+                .subset2(poly1, "ymax") > ymin)
+   if (length(idx) > 0L) {
+     area_streets <- streets[idx,]
+     area_streets <- sf::st_buffer(area_streets$geometry, dist = LANE_WIDTH * .subset2(area_streets, "LANE_RADIUS"))
+     new_geo <- sf::st_cast(
+                  sf::st_difference(
+                    poly1$geometry,
+                    sf::st_union(area_streets)
                   )
-                )
-              , "POLYGON")
-   new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
-   data.table::set(
-     polys,
-     i = i,
-     j = "geometry",
-     value = list("geometry" = new_geo)
-   )
+                , "POLYGON")
+     new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
+     data.table::set(
+       polys,
+       i = i,
+       j = "geometry",
+       value = list("geometry" = new_geo)
+     )
+   }
  }
  attr(polys, "class") <- cls_ori
  return(polys)
+}
+
+#' @title Add buffer and remove streets polygons batch optimized version (> 200 polygons).
+#' @description This function remove streets from an sf table of POINTS polygons.
+#' @return An sf object
+#' @param polys An sf object of POLYGON.
+#' @param streets An sf object of LINESTRING with LANE_RADIUS.
+#' @importFrom data.table setDT set rbindlist
+#' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
+buff_and_remove_streets_batch <- function(polys, streets) {
+  pts <- polys$geometry
+  polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
+  inter <- sf::st_intersects(polys, streets)
+  streets <- streets[unique(unlist(inter)),]
+  inter <- sf::st_intersects(polys, streets)
+  streets <- sf::st_buffer(streets$geometry, dist = LANE_WIDTH * .subset2(streets, "LANE_RADIUS"))
+  cls_ori <- attr(polys, "class"); setDT(polys)
+  for (i in 1L:nrow(polys)) {
+    idx <- inter[[i]]
+    if (length(idx) > 0L) {
+      poly1 <- polys[i,]
+      area_streets <- streets[idx]
+      new_geo <- sf::st_cast(
+                   sf::st_difference(
+                     poly1$geometry,
+                     sf::st_union(area_streets)
+                   )
+                 , "POLYGON")
+      new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
+      data.table::set(
+        polys,
+        i = i,
+        j = "geometry",
+        value = list("geometry" = new_geo)
+      )
+    }
+  }
+  attr(polys, "class") <- cls_ori
+  return(polys)
 }
 
 #' @title Polygon-o-tron
