@@ -4,10 +4,12 @@
 \alias{create_polygons}
 \title{Polygon-o-tron}
 \usage{
-create_polygons(dt)
+create_polygons(dt, streets)
 }
 \arguments{
 \item{dt}{A data.table containing required fields.}
+
+\item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
 A data.table.

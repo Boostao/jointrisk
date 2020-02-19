@@ -4,12 +4,14 @@
 \alias{get_joint_risks}
 \title{Polygon blaster}
 \usage{
-get_joint_risks(dt, polygons)
+get_joint_risks(dt, polygons, streets)
 }
 \arguments{
 \item{dt}{A data.frame with the following}
 
 \item{polygons}{A data.frame to compare dt to.}
+
+\item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
 PRCH_ID and POLYGON_ID with package version.

@@ -13,4 +13,4 @@ Imports: data.table, sf (>= 0.7.7), jsonlite
 Suggests: 
     extraw,
     testthat (>= 2.1.0)
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2

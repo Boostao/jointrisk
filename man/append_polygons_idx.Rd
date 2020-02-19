@@ -4,18 +4,27 @@
 \alias{append_polygons_idx}
 \title{Add polygon index}
 \usage{
-append_polygons_idx(dt, prefix = "", affectat = paste0(prefix,
-  "AFFECTAT"), comaubat = paste0(prefix, "COMAUBAT"),
-  latitcom = paste0(prefix, "LATITCOM"), longicom = paste0(prefix,
-  "LONGICOM"), murstruc = paste0(prefix, "MURSTRUC"),
-  plancher = paste0(prefix, "PLANCHER"), pregeoco = paste0(prefix,
-  "PREGEOCO"), princfus = paste0(prefix, "PRINCFUS"),
-  resaufeu = paste0(prefix, "RESAUFEU"), risasgrb = paste0(prefix,
-  "RISASGRB"), rvextbet = paste0(prefix, "RVEXTBET"),
-  rvextbri = paste0(prefix, "RVEXTBRI"), superrez = paste0(prefix,
-  "SUPERREZ"), toitstru = paste0(prefix, "TOITSTRU"),
-  umessupe = paste0(prefix, "UMESSUPE"), mttotras = paste0(prefix,
-  "MTTOTRAS"))
+append_polygons_idx(
+  dt,
+  prefix = "",
+  affectat = paste0(prefix, "AFFECTAT"),
+  comaubat = paste0(prefix, "COMAUBAT"),
+  latitcom = paste0(prefix, "LATITCOM"),
+  longicom = paste0(prefix, "LONGICOM"),
+  murstruc = paste0(prefix, "MURSTRUC"),
+  plancher = paste0(prefix, "PLANCHER"),
+  pregeoco = paste0(prefix, "PREGEOCO"),
+  princfus = paste0(prefix, "PRINCFUS"),
+  resaufeu = paste0(prefix, "RESAUFEU"),
+  risasgrb = paste0(prefix, "RISASGRB"),
+  rvextbet = paste0(prefix, "RVEXTBET"),
+  rvextbri = paste0(prefix, "RVEXTBRI"),
+  superrez = paste0(prefix, "SUPERREZ"),
+  toitstru = paste0(prefix, "TOITSTRU"),
+  umessupe = paste0(prefix, "UMESSUPE"),
+  mttotras = paste0(prefix, "MTTOTRAS"),
+  streets
+)
 }
 \arguments{
 \item{dt}{A data.table to which you want to add polygon index. If the field name
@@ -55,6 +64,8 @@ that field. Field value are equivalence value (COOP_ID 11).}
 \item{umessupe}{A character string. Default to paste0(prefix, "UMESSUPE").}
 
 \item{mttotras}{A character string. Default to paste0(prefix, "MTTOTRAS").}
+
+\item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
 A data.table with paste0(prefix,"POLYINDX"), paste0(prefix,"POLYMAXRISASGRB"),

@@ -4,7 +4,7 @@
 \alias{warmup}
 \title{Warmup vectorizer functions for optimized runs.}
 \usage{
-warmup(polygons)
+warmup(polygons, streets)
 }
 \description{
 Warmup vectorizer functions for optimized runs.

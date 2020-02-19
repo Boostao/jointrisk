@@ -4,13 +4,15 @@
 \alias{update_polygons}
 \title{Obtain polygons}
 \usage{
-update_polygons(source, polygons = NULL)
+update_polygons(source, polygons = NULL, streets = NULL)
 }
 \arguments{
 \item{source}{A data.table used to update the polygon. Use load_risk_cgen(file) or
 get_cgen_risk() (require extraw).}
 
 \item{polygons}{A polygons ref to update from.}
+
+\item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
 A data.table with PRCH_ID and POLYGON_ID.
