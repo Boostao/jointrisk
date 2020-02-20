@@ -204,7 +204,7 @@ create_polygons <- function(dt, streets) {
  polygons <- sf::st_as_sf(polygons,
                           coords = c("LONGICOM", "LATITCOM"),
                           crs = "+proj=longlat +datum=WGS84")
- polygons <- sf::st_transform(polygons, 3488)
+ polygons <- sf::st_transform(polygons, 3347)
  polygons <- buff_and_remove_streets(polygons, streets)
  pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
  idx <- sf::st_intersects(polygons, pockets)
@@ -282,7 +282,7 @@ get_joint_risks <- function(dt, polygons, streets) {
     dt_sp <- sf::st_as_sf(dt,
                           coords = c("LONGICOM", "LATITCOM"),
                           crs = "+proj=longlat +datum=WGS84")
-    dt_sp <- sf::st_transform(dt_sp, 3488)
+    dt_sp <- sf::st_transform(dt_sp, 3347)
     newrisk <- buff_and_remove_streets(dt_sp, streets)
     b <- as.list(sf::st_bbox(newrisk))
     poly_idx <- which(.subset2(b, "xmin") < .subset2(polygons, "xmax") &
