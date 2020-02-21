@@ -12,7 +12,7 @@ usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 # Put file in data-raw folder
 # Once the file streets.RDS has been created upload to project storage
 streets <- st_read(dsn = "./data-raw", "Streets")
-streets <- st_transform(streets, 3347)
+streets <- st_transform(streets, 3488)
 cls_ori <- class(streets)
 setDT(streets)
 nm <- names(streets)[-length(streets)]
