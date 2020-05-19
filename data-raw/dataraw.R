@@ -123,7 +123,7 @@ return(map)
 }
 
 carte <- create_map(res$source, res$pockets)
-carte
+# carte
 
 month_report <- format(Sys.Date(), "%y%m")
 saveWidget(carte, paste0(getwd(), "/data-raw/Carte effectif_",month_report,".html"), selfcontained = T)
