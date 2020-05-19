@@ -11,6 +11,9 @@ usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 # HERE - 181H0 - Navstreets + Traffic Pattern + Road Roughness dataset)
 # Put file in data-raw folder
 # Once the file streets.RDS has been created upload to project storage
+# sf version has to match the one in the image or you will get
+# Error: C stack usage XXXXXXXXX is too close to the limit
+# Currently it is 0.8.0
 library(sf)
 library(data.table)
 streets <- st_read(dsn = "./data-raw", "Streets")
@@ -25,15 +28,15 @@ streets <- streets[, LANE_RADIUS := 2L * as.integer(LANE_CAT)][PAVED == "Y" &
                                                                PRIVATE == "N" &
                                                                PLOT_ROAD == "N" &
                                                                TUNNEL == "N" &
-                                                               !(L_POSTCODE %chin% reject_pcode |
-                                                                 R_POSTCODE %chin% reject_pcode)][, (nm) := NULL]
+                                                               !L_POSTCODE %in% reject_pcode &
+                                                               !R_POSTCODE %in% reject_pcode][, (nm) := NULL]
 set(
   streets,
   j = c("xmin", "ymin", "xmax", "ymax"),
   value = as.list(data.table::rbindlist(lapply(streets$geometry, function(x) as.list(sf::st_bbox(x)))))
 )
 attr(streets, "class") <- cls_ori
-saveRDS(streets, "./data-raw/streets.RDS")
+saveRDS(streets, "./data-raw/streets2.RDS")
 
 # How to use on an external dataset
 
