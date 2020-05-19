@@ -11,17 +11,22 @@ usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 # HERE - 181H0 - Navstreets + Traffic Pattern + Road Roughness dataset)
 # Put file in data-raw folder
 # Once the file streets.RDS has been created upload to project storage
+library(sf)
+library(data.table)
 streets <- st_read(dsn = "./data-raw", "Streets")
 streets <- st_transform(streets, 3488)
 cls_ori <- class(streets)
 setDT(streets)
 nm <- names(streets)[-length(streets)]
+reject_pcode <- c("H2J", "H2Y" , "H2Z", "H3B", "G1L", "G1K", "G1R")
 streets <- streets[, LANE_RADIUS := 2L * as.integer(LANE_CAT)][PAVED == "Y" &
                                                                FERRY_TYPE == "H" &
                                                                BRIDGE == "N" &
                                                                PRIVATE == "N" &
                                                                PLOT_ROAD == "N" &
-                                                               TUNNEL == "N"][, (nm) := NULL]
+                                                               TUNNEL == "N" &
+                                                               !(L_POSTCODE %chin% reject_pcode |
+                                                                 R_POSTCODE %chin% reject_pcode)][, (nm) := NULL]
 set(
   streets,
   j = c("xmin", "ymin", "xmax", "ymax"),
