@@ -13,7 +13,7 @@ usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 # Once the file streets.RDS has been created upload to project storage
 # sf version has to match the one in the image or you will get
 # Error: C stack usage XXXXXXXXX is too close to the limit
-# Currently it is 0.8.0
+# Currently it is 0.8.1 as newer version introduce long delays
 library(sf)
 library(data.table)
 streets <- st_read(dsn = "./data-raw", "Streets")
@@ -36,7 +36,7 @@ set(
   value = as.list(data.table::rbindlist(lapply(streets$geometry, function(x) as.list(sf::st_bbox(x)))))
 )
 attr(streets, "class") <- cls_ori
-saveRDS(streets, "./data-raw/streets2.RDS")
+saveRDS(streets, "./data-raw/streets.RDS")
 
 # How to use on an external dataset
 
