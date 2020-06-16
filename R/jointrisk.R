@@ -107,7 +107,7 @@ buff_and_remove_streets <- function(polys, streets) {
 #' @param polys An sf object of POLYGON.
 #' @param streets An sf object of LINESTRING with LANE_RADIUS.
 #' @importFrom data.table setDT set rbindlist
-#' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
+#' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature st_crs
 buff_and_remove_streets_api <- function(polys, streets) {
  pts <- polys$geometry
  polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
@@ -119,6 +119,7 @@ buff_and_remove_streets_api <- function(polys, streets) {
  )
  xmax <- .subset2(streets, "xmax"); xmin <- .subset2(streets, "xmin")
  ymax <- .subset2(streets, "ymax"); ymin <- .subset2(streets, "ymin")
+ base_crs <- sf::st_crs(polys$geometry)
  for (i in 1L:nrow(polys)) {
    poly1 <- polys[i,]
    idx <- which(.subset2(poly1, "xmin") < xmax &
@@ -129,12 +130,14 @@ buff_and_remove_streets_api <- function(polys, streets) {
      area_streets <- streets[idx,]
      area_streets <- sf::st_buffer(area_streets$geometry, dist = LANE_WIDTH * .subset2(area_streets, "LANE_RADIUS"))
      new_geo <- sf::st_cast(
-                  sf::st_difference(
-                    poly1$geometry,
-                    sf::st_union(area_streets)
-                  )
-                , "POLYGON")
-     new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
+       sf::st_sfc(
+         sf:::CPL_geos_op2("difference",
+                           poly1$geometry,
+                           sf::st_sfc(sf:::CPL_geos_union(area_streets))),
+         crs = base_crs
+       )
+       , "POLYGON")
+     new_geo <- new_geo[sf:::CPL_geos_nearest_feature(pts[i], new_geo)]
      data.table::set(
        polys,
        i = i,
@@ -162,18 +165,21 @@ buff_and_remove_streets_batch <- function(polys, streets) {
   inter <- sf::st_intersects(polys, streets)
   streets <- sf::st_buffer(streets$geometry, dist = LANE_WIDTH * .subset2(streets, "LANE_RADIUS"))
   cls_ori <- attr(polys, "class"); setDT(polys)
+  base_crs <- sf::st_crs(polys$geometry)
   for (i in 1L:nrow(polys)) {
     idx <- inter[[i]]
     if (length(idx) > 0L) {
       poly1 <- polys[i,]
       area_streets <- streets[idx]
       new_geo <- sf::st_cast(
-                   sf::st_difference(
-                     poly1$geometry,
-                     sf::st_union(area_streets)
-                   )
-                 , "POLYGON")
-      new_geo <- new_geo[sf::st_nearest_feature(pts[i], new_geo)]
+        sf::st_sfc(
+          sf:::CPL_geos_op2("difference",
+                            poly1$geometry,
+                            sf::st_sfc(sf:::CPL_geos_union(area_streets))),
+          crs = base_crs
+        )
+        , "POLYGON")
+      new_geo <- new_geo[sf:::CPL_geos_nearest_feature(pts[i], new_geo)]
       data.table::set(
         polys,
         i = i,

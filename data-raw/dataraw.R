@@ -13,7 +13,7 @@ usethis::use_data(compo, internal = FALSE, overwrite = TRUE)
 # Once the file streets.RDS has been created upload to project storage
 # sf version has to match the one in the image or you will get
 # Error: C stack usage XXXXXXXXX is too close to the limit
-# Currently it is 0.8.1 as newer version introduce long delays
+# Currently it is 0.9.4 as newer version introduce long delays
 library(sf)
 library(data.table)
 streets <- st_read(dsn = "./data-raw", "Streets")
