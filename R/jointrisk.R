@@ -212,7 +212,10 @@ create_polygons <- function(dt, streets) {
                           crs = "+proj=longlat +datum=WGS84")
  polygons <- sf::st_transform(polygons, 3488)
  polygons <- buff_and_remove_streets(polygons, streets)
- pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
+ inter <- sf::st_intersects(polygons)
+ lngs <- lengths(inter)
+ pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(polygons[which(lngs>1),]$geometry)), "POLYGON")
+ pockets <- c(pockets, polygons[which(lngs==1),]$geometry)
  idx <- sf::st_intersects(polygons, pockets)
  classes <- attr(polygons, "class")
  # reclass as data.table to allow data.table operation
