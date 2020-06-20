@@ -160,9 +160,21 @@ buff_and_remove_streets_api <- function(polys, streets) {
 buff_and_remove_streets_batch <- function(polys, streets) {
   pts <- polys$geometry
   polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
-  inter <- sf::st_intersects(polys, streets)
+  inter <- sf:::CPL_geos_binop(
+    polys$geometry,
+    streets$geometry,
+    "intersects",
+    pattern = NA_character_,
+    prepared = TRUE
+  )
   streets <- streets[unique(unlist(inter)),]
-  inter <- sf::st_intersects(polys, streets)
+  inter <- sf:::CPL_geos_binop(
+    polys$geometry,
+    streets$geometry,
+    "intersects",
+    pattern = NA_character_,
+    prepared = TRUE
+  )
   streets <- sf::st_buffer(streets$geometry, dist = LANE_WIDTH * .subset2(streets, "LANE_RADIUS"))
   cls_ori <- attr(polys, "class"); setDT(polys)
   base_crs <- sf::st_crs(polys$geometry)
@@ -212,11 +224,21 @@ create_polygons <- function(dt, streets) {
                           crs = "+proj=longlat +datum=WGS84")
  polygons <- sf::st_transform(polygons, 3488)
  polygons <- buff_and_remove_streets(polygons, streets)
- inter <- sf::st_intersects(polygons)
+ inter <- sf:::CPL_geos_binop(
+   polygons$geometry,
+   polygons$geometry,
+   "intersects",
+   pattern = NA_character_,
+   prepared = TRUE)
  lngs <- lengths(inter)
  pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(polygons[which(lngs>1),]$geometry)), "POLYGON")
  pockets <- c(pockets, polygons[which(lngs==1),]$geometry)
- idx <- sf::st_intersects(polygons, pockets)
+ idx <- sf:::CPL_geos_binop(
+   polygons$geometry,
+   pockets,
+   "intersects",
+   pattern = NA_character_,
+   prepared = TRUE)
  classes <- attr(polygons, "class")
  # reclass as data.table to allow data.table operation
  setDT(polygons)
@@ -298,8 +320,12 @@ get_joint_risks <- function(dt, polygons, streets) {
                       .subset2(b, "xmax") > .subset2(polygons, "xmin") &
                       .subset2(b, "ymin") < .subset2(polygons, "ymax") &
                       .subset2(b, "ymax") > .subset2(polygons, "ymin"))
-    matches <- sf::st_intersects(newrisk, polygons[poly_idx, with = FALSE])
-
+    matches <- sf:::CPL_geos_binop(
+      newrisk$geometry,
+      polygons[poly_idx, with = FALSE]$geometry,
+      "intersects",
+      pattern = NA_character_,
+      prepared = TRUE)
     # Formuler une reponse de retour qui fait du sens
     # Enlever les risques conjoints avec lui-même (meme PRCH_ID ou POL_NO, PRCH_NO)
     # Qu'est-ce qui arrive sur un copier-produit?

@@ -19,7 +19,7 @@ function() {
 }
 
 #* Get polygons id
-#* @param dt
+#* @param dt:df*
 #* @post /jointrisk/opus
 #* @serializer json
 function(dt) {
