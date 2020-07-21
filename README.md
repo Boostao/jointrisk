@@ -2,6 +2,14 @@
 
 Updates
 
+# 1.1.3
+
+sf performance upgrade, batching unions.
+
+# 1.1.2
+
+sf performance upgrade
+
 # 1.1.1
 
 Split buff_and_remove_streets into an API version and a batch optimized version.

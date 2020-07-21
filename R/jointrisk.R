@@ -231,7 +231,14 @@ create_polygons <- function(dt, streets) {
    pattern = NA_character_,
    prepared = TRUE)
  lngs <- lengths(inter)
- pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(polygons[which(lngs>1),]$geometry)), "POLYGON")
+ batch_size <- 5000
+ batch <- which(lngs>1)
+ pockets <- polygons[integer(),]$geometry
+ while (length(batch) > 0) {
+   current_batch <- batch[1:min(length(batch), batch_size)]
+   batch <- batch[-(1:min(length(batch), batch_size))]
+   pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(c(pockets, polygons[current_batch,]$geometry))), "POLYGON")
+ }
  pockets <- c(pockets, polygons[which(lngs==1),]$geometry)
  idx <- sf:::CPL_geos_binop(
    polygons$geometry,
