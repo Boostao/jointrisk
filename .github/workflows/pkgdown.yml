@@ -1,0 +1,91 @@
+on:
+  push:
+    branches: master
+    paths:
+    - 'DESCRIPTION'
+    - 'README.md'
+    - '_pkgdown.yml'
+    - 'pkgdown/**'
+    - 'vignettes/**'
+    - 'man/**'
+  pull_request:
+    branches: master
+  repository_dispatch:
+    types: [pkgdown_trigger]
+
+name: pkgdown
+
+jobs:
+  pkgdown:
+    name: Build site + re-push
+    runs-on: macos-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GH_PAT }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: r-lib/actions/setup-r@master
+
+      - uses: r-lib/actions/setup-pandoc@master
+
+      - name: Query dependencies
+        shell: Rscript {0}
+        run: |
+          install.packages("remotes")
+          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
+          writeLines(sprintf("R-%i.%i", getRversion()$major, getRversion()$minor), ".github/R-version")
+      - name: Cache R packages
+        uses: actions/cache@v1
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
+          
+      - name: Install dependencies
+        shell: Rscript {0}
+        run: |
+          remotes::install_deps(dependencies = TRUE)
+          remotes::install_dev("pkgdown")
+      - name: Install package
+        run: R CMD INSTALL .
+
+      - name: Build Site (PR)
+        if: github.event_name == 'pull_request'
+        shell: Rscript {0}
+        run: |
+          pkgdown::build_site(new_process = FALSE)
+      # Must validate after. Otherwise files are saved and `pkgdown::build_site()` gets mad
+      - name: Validate all topics exist (PR)
+        if: github.event_name == 'pull_request'
+        shell: Rscript {0}
+        run: |
+          pkgdown::build_reference_index()
+          stopifnot(length(warnings()) == 0)
+      - name: Git Config
+        if: github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "${GITHUB_ACTOR}@users.noreply.github.com" && \
+            git config --local user.name "${GITHUB_ACTOR}"
+      - name: Build and Deploy Site
+        if: github.event_name != 'pull_request'
+        shell: Rscript {0}
+        run: |
+          pkgdown::deploy_to_branch(new_process = FALSE)
+  pkgdown_minicran:
+    needs: pkgdown
+    name: Minicran docs deployment
+    runs-on: [self-hosted, minicran]
+    steps:
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
+        with:
+          ref: gh-pages 
+      - name: Copy package docs
+        if: github.event_name != 'pull_request'
+        run: |
+          z <- grep("<a class=\"navbar-link\" href=\"index\\.html\">", readLines("index.html", warn = FALSE), value = TRUE)
+          docdir <- paste0("/var/www/minicran/docs/", gsub("\\s*<[^>]+>", "", z))
+          unlink(docdir, recursive = TRUE)
+          dir.create(docdir, recursive = TRUE)
+          file.copy(dir(".", full.names = TRUE), docdir, recursive = TRUE)
+        shell: Rscript --no-init-file {0}
