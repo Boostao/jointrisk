@@ -1,0 +1,40 @@
+on:
+  repository_dispatch:
+    types: [minicran_trigger]
+  push:
+    branches: master
+    paths:
+    - 'DESCRIPTION'
+  pull_request:
+    branches: master
+    
+name: minicran
+    
+jobs:
+  minicran:
+    runs-on: [self-hosted, minicran]
+    name: Minicran deployment
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check if package version is greater
+        run: |
+          pkg <- devtools::as.package(".")$package
+          new_v <- devtools::as.package(".")$version
+          cur_v <- available.packages(
+            repos = "http://localhost/", 
+            ignore_repo_cache = TRUE, 
+            type = "both",
+            filters = list(function(x) {x[rownames(x)==pkg,colnames(x)=="Version"]}))
+          if (utils::compareVersion(cur_v, new_v) > -1) {
+            stop(pkg, " package build version ", new_v,
+                 " is not greater than the current miniCRAN version ", cur_v,
+                 ". Bump version in package DESCRIPTION file.")
+          }
+        shell: Rscript --no-init-file {0}
+      - name: Build/Add source package
+        if: github.event_name == 'push'
+        run: |
+          pkg <- devtools::build(".", vignettes = FALSE)
+          miniCRAN::addLocalPackage(basename(pkg), "..", "/var/www/minicran")
+          unlink(pkg)
+        shell: Rscript --no-init-file {0}
