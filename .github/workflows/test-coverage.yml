@@ -41,8 +41,8 @@ jobs:
         env:
           RHUB_PLATFORM: linux-x86_64-ubuntu-gcc
         run: |
-          Rscript -e "remotes::install_github('r-hub/sysreqs')"
-          sysreqs=$(Rscript -e "cat(sysreqs::sysreq_commands('DESCRIPTION'))")
+          Rscript -e "remotes::install_github('meztez/sysreqs')"
+          sysreqs=$(Rscript -e "cat(sysreqs::sysreq_commands('DESCRIPTION', remotes = TRUE, pkgs = "covr")")
           sudo -s eval "$sysreqs"
 
       - name: Install dependencies
