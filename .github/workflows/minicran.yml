@@ -32,7 +32,7 @@ jobs:
                    ". Bump version in package DESCRIPTION file.")
             }           
           } else {
-            message("No current versin found, probably a new package.")
+            message("No current version found, probably a new package.")
           }
  
         shell: Rscript --no-init-file {0}
