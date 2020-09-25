@@ -25,11 +25,16 @@ jobs:
             ignore_repo_cache = TRUE, 
             type = "both",
             filters = list(function(x) {x[rownames(x)==pkg,colnames(x)=="Version"]}))
-          if (utils::compareVersion(cur_v, new_v) > -1) {
-            stop(pkg, " package build version ", new_v,
-                 " is not greater than the current miniCRAN version ", cur_v,
-                 ". Bump version in package DESCRIPTION file.")
+          if (nchar(cur_v) > 0) {
+            if (utils::compareVersion(cur_v, new_v) > -1) {
+              stop(pkg, " package build version ", new_v,
+                   " is not greater than the current miniCRAN version ", cur_v,
+                   ". Bump version in package DESCRIPTION file.")
+            }           
+          } else {
+            message("No current versin found, probably a new package.")
           }
+ 
         shell: Rscript --no-init-file {0}
       - name: Build/Add source package
         if: github.event_name == 'push'
