@@ -37,7 +37,7 @@ jobs:
  
         shell: Rscript --no-init-file {0}
       - name: Build/Add source package
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: |
           pkg <- devtools::build(".", vignettes = FALSE)
           miniCRAN::addLocalPackage(basename(pkg), "..", "/var/www/minicran")
