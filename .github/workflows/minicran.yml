@@ -25,7 +25,7 @@ jobs:
             ignore_repo_cache = TRUE, 
             type = "both",
             filters = list(function(x) {x[rownames(x)==pkg,colnames(x)=="Version"]}))
-          if (nchar(cur_v) > 0) {
+          if (isTRUE(nchar(cur_v) > 0)) {
             if (utils::compareVersion(cur_v, new_v) > -1) {
               stop(pkg, " package build version ", new_v,
                    " is not greater than the current miniCRAN version ", cur_v,
