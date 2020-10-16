@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.1.4
+
+sort risks before creating polygons
+
 # 1.1.3
 
 sf performance upgrade, batching unions.

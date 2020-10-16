@@ -505,7 +505,7 @@ load_risk_cgen <- function() {
   numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
 
-  return(dt)
+  return(dt[order((as.numeric(LATITCOM)*1000 + as.numeric(LONGICOM)))])
 
 }
 
