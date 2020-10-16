@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.1.5
+
+Change `update_polygons` return form to include message.
+
 # 1.1.4
 
 sort risks before creating polygons
