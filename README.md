@@ -2,6 +2,13 @@
 
 Updates
 
+# 1.1.6
+
+Reduce the amount of segments in `st_buffer` from 30 to 3. Reducing geometries compute complexity.
+Snap polys to grid by setting precision on references polys.
+https://trac.osgeo.org/geos/ticket/997
+https://github.com/locationtech/jts/issues/485
+
 # 1.1.5
 
 Change `update_polygons` return form to include message.

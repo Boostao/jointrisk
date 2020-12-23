@@ -110,7 +110,10 @@ buff_and_remove_streets <- function(polys, streets) {
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature st_crs
 buff_and_remove_streets_api <- function(polys, streets) {
  pts <- polys$geometry
- polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
+ polys <- sf::st_set_precision(
+   sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"), nQuadSegs = 3),
+   units::set_units(10, nm)
+ )
  cls_ori <- attr(polys, "class"); setDT(polys);
  data.table::set(
    polys,
@@ -128,7 +131,14 @@ buff_and_remove_streets_api <- function(polys, streets) {
                 .subset2(poly1, "ymax") > ymin)
    if (length(idx) > 0L) {
      area_streets <- streets[idx,]
-     area_streets <- sf::st_buffer(area_streets$geometry, dist = LANE_WIDTH * .subset2(area_streets, "LANE_RADIUS"))
+     area_streets <- sf::st_set_precision(
+       sf::st_buffer(
+         area_streets$geometry,
+         dist = LANE_WIDTH * .subset2(area_streets, "LANE_RADIUS"),
+         nQuadSegs = 3
+       ),
+       units::set_units(10, nm)
+     )
      new_geo <- sf::st_cast(
        sf::st_sfc(
          sf:::CPL_geos_op2("difference",
@@ -159,7 +169,10 @@ buff_and_remove_streets_api <- function(polys, streets) {
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
 buff_and_remove_streets_batch <- function(polys, streets) {
   pts <- polys$geometry
-  polys <- sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"))
+  polys <- sf::st_set_precision(
+    sf::st_buffer(polys, dist = .subset2(polys, "RISKRADIUS"), nQuadSegs = 3),
+    units::set_units(10, nm)
+  )
   inter <- sf:::CPL_geos_binop(
     polys$geometry,
     streets$geometry,
@@ -175,7 +188,10 @@ buff_and_remove_streets_batch <- function(polys, streets) {
     pattern = NA_character_,
     prepared = TRUE
   )
-  streets <- sf::st_buffer(streets$geometry, dist = LANE_WIDTH * .subset2(streets, "LANE_RADIUS"))
+  streets <- sf::st_set_precision(
+    sf::st_buffer(streets$geometry, dist = LANE_WIDTH * .subset2(streets, "LANE_RADIUS"), nQuadSegs = 3),
+    units::set_units(10, nm)
+  )
   cls_ori <- attr(polys, "class"); setDT(polys)
   base_crs <- sf::st_crs(polys$geometry)
   for (i in 1L:nrow(polys)) {
@@ -231,14 +247,8 @@ create_polygons <- function(dt, streets) {
    pattern = NA_character_,
    prepared = TRUE)
  lngs <- lengths(inter)
- batch_size <- 5000
  batch <- which(lngs>1)
- pockets <- polygons[integer(),]$geometry
- while (length(batch) > 0) {
-   current_batch <- batch[1:min(length(batch), batch_size)]
-   batch <- batch[-(1:min(length(batch), batch_size))]
-   pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(c(pockets, polygons[current_batch,]$geometry))), "POLYGON")
- }
+ pockets <- sf::st_cast(sf::st_sfc(sf:::CPL_geos_union(polygons[batch,]$geometry)), "POLYGON")
  pockets <- c(pockets, polygons[which(lngs==1),]$geometry)
  idx <- sf:::CPL_geos_binop(
    polygons$geometry,
