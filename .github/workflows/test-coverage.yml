@@ -1,10 +1,12 @@
 on:
   push:
-    branches: master
+    branches: [master, main]
     paths:
     - 'tests/**'
   pull_request: 
-    branches: master
+    branches: [master, main]
+    paths-ignore:
+    - '.github/**'
   repository_dispatch:
     types: [covr_trigger]
 
@@ -12,15 +14,18 @@ name: test-coverage
 
 jobs:
   test-coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       GITHUB_PAT: ${{ secrets.GH_PAT }}
+      RSPM: 'https://packagemanager.rstudio.com/cran/__linux__/focal/latest'
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      R_RENV_CACHE_DIR: "~/.local/share/renv"
     steps:
       - uses: actions/checkout@v2
 
-      - uses: r-lib/actions/setup-r@master
+      - uses: r-lib/actions/setup-r@v1
 
-      - uses: r-lib/actions/setup-pandoc@master
+      - uses: r-lib/actions/setup-pandoc@v1
       
       - name: Query dependencies
         run: |
@@ -30,9 +35,11 @@ jobs:
         shell: Rscript {0}
 
       - name: Cache R packages
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
-          path: ${{ env.R_LIBS_USER }}
+          path: |
+            ${{ env.R_LIBS_USER }}
+            ${{ env.R_RENV_CACHE_DIR }}
           key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
           
@@ -47,19 +54,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          remotes::install_deps(dependencies = TRUE)
+          if (file.exists("renv.lock")) {
+            if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+            renv::restore()
+          } else {
+            remotes::install_deps(dependencies = TRUE)
+          }
           remotes::install_cran("covr", dependencies = TRUE)
         shell: Rscript {0}
 
       - name: Test coverage
         run: |
-          x <- covr::package_coverage()
+          x <- covr::package_coverage(quiet = FALSE, verbose = TRUE)
           warning("Tests code coverage percentage is : ", covr::percent_coverage(x))
           covr::report(x, file = "covr-report.html")
         shell: Rscript {0}
         
       - name: Upload check results
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v2
         with:
           name: covr-report
           path: covr-report.html

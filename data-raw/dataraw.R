@@ -49,11 +49,13 @@ saveRDS(streets, "./data-raw/streets.RDS")
 library(dplyr)
 library(data.table)
 library(leaflet)
+library(leaflet.extras)
 library(htmlwidgets)
 library(htmltools)
 library(jointrisk)
 library(sf)
 library(extraw)
+
 
 dt <- extraw::get_policies(
     inforce = TRUE,
@@ -100,18 +102,14 @@ icons3 <- awesomeIcons(
                          data_cap$PRODUIT == "CC"  ~ 'black'),
   squareMarker = FALSE)
 
-d_wgs84 <- st_transform(pocket, "+init=epsg:4326")
+d_wgs84 <- st_transform(pocket, 4326)
 
 # Create the map
 map <- leaflet() %>%
   setView(lng = -71.2682, lat = 46.7927, zoom = 07) %>%
-  addProviderTiles(providers$Esri, group = "Esri") %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "Satellite")  %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "OpenStreetMap") %>%
+  addSearchOSM() %>%
   addAwesomeMarkers(~as.numeric(LONGICOM),~as.numeric(LATITCOM), icon = icons3, popup = ~popup3,data = data_cap, clusterOptions =    markerClusterOptions())  %>%
-  addLayersControl(baseGroups = c("Esri","Satellite"),
-                   options = layersControlOptions(collapsed = F),
-                   position = "topright"
-  ) %>%
   addPolygons(data = d_wgs84) %>%
   addMeasure(
     position = "bottomleft",

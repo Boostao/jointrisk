@@ -237,7 +237,8 @@ create_polygons <- function(dt, streets) {
  rm(dt)
  polygons <- sf::st_as_sf(polygons,
                           coords = c("LONGICOM", "LATITCOM"),
-                          crs = "+proj=longlat +datum=WGS84")
+                          crs = "+proj=longlat +datum=WGS84",
+                          remove = FALSE)
  polygons <- sf::st_transform(polygons, 3488)
  polygons <- buff_and_remove_streets(polygons, streets)
  inter <- sf:::CPL_geos_binop(

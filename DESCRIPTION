@@ -1,7 +1,7 @@
 Package: jointrisk
 Type: Package
 Title: Obtain et return joint risk IDs
-Version: 1.1.6
+Version: 1.1.7
 Author: Alexandre Leclerc, Bruno Tremblay
 Maintainer: Bruno Tremblay <bruno.tremblay@lacapitale.com>
 Description: Joint risk commercial project.
@@ -12,5 +12,7 @@ Depends: R (>= 3.6)
 Imports: data.table, sf (>= 0.7.7), jsonlite
 Suggests: 
     extraw,
-    testthat (>= 2.1.0)
+    testthat (>= 2.1.0),
+    leaflet,
+    leaflet.extras
 RoxygenNote: 7.1.1
