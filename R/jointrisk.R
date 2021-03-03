@@ -108,6 +108,7 @@ buff_and_remove_streets <- function(polys, streets) {
 #' @param streets An sf object of LINESTRING with LANE_RADIUS.
 #' @importFrom data.table setDT set rbindlist
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature st_crs
+#' @importFrom units set_units
 buff_and_remove_streets_api <- function(polys, streets) {
  pts <- polys$geometry
  polys <- sf::st_set_precision(
