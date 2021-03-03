@@ -9,7 +9,7 @@ License: GPL-2
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.6)
-Imports: data.table, sf (>= 0.7.7), jsonlite
+Imports: data.table, sf (>= 0.7.7), units, jsonlite
 Suggests: 
     extraw,
     testthat (>= 2.1.0),
