@@ -12,12 +12,12 @@ function(res) {
 function() {
   future({
     invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
-    polys <- update_polygons(load_risk_cgen(), .jointrisk$assets$polygons, .jointrisk$assets$streets)
+    polys <- update_polygons(load_risk_cgen(jrfn), .jointrisk$assets$polygons, .jointrisk$assets$streets)
     rm(assets, envir = .jointrisk)
     .jointrisk$assets <- new.env(parent = .jointrisk)
     .jointrisk$assets$streets <- readRDS(stfn)
     .jointrisk$assets$polygons <- polys$poly
-    return(polys$msg)    
+    return(polys$msg) 
   }, seed = NULL)
 }
 
@@ -47,11 +47,9 @@ stfn <- grep("streets.RDS?", sto, value = TRUE)[1]
 invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
 invisible(gcs_get_object(stfn, saveToDisk = stfn, overwrite = TRUE))
 
-options(jointrisk.riskfile = jrfn)
-
 .jointrisk$assets$streets <- readRDS(stfn)
 
-.jointrisk$assets$polygons <- update_polygons(load_risk_cgen(), streets = .jointrisk$assets$streets)$poly
+.jointrisk$assets$polygons <- update_polygons(load_risk_cgen(jrfn), streets = .jointrisk$assets$streets)$poly
 
 warmup(.jointrisk$assets$polygons, .jointrisk$assets$streets)
 example <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
@@ -83,7 +81,6 @@ function(INTE_NO, POAS_NO, PRCH_NO, res) {
 }
 
 # Map ----
-
 library(leaflet)
 library(leaflet.extras)
 library(data.table)

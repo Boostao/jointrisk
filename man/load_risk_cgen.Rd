@@ -4,7 +4,10 @@
 \alias{load_risk_cgen}
 \title{Get risks CGEN from a file}
 \usage{
-load_risk_cgen()
+load_risk_cgen(file)
+}
+\arguments{
+\item{file}{file to load}
 }
 \value{
 A data.table object with IDs and columns.

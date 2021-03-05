@@ -493,12 +493,11 @@ get_risks_cgen <- function() {
 
 #' @export
 #' @title Get risks CGEN from a file
+#' @param file file to load
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
 #' @importFrom data.table setDT fread setnames
-load_risk_cgen <- function() {
-
-  file <- getOption("jointrisk.riskfile")
+load_risk_cgen <- function(file) {
 
   dt <- data.table::fread(file, header = FALSE,
                           col.names = c("POAS_NO", "INTE_NO", "PRCH_NO", "PROD_CODE", "PRCH_ID", "VEPC_ID", "QUESTION", "REPONSE"))
