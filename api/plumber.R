@@ -10,15 +10,13 @@ function(res) {
 #* Update polygons
 #* @get /update_polygons
 function() {
-  future({
-    invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
-    polys <- update_polygons(load_risk_cgen(jrfn), .jointrisk$assets$polygons, .jointrisk$assets$streets)
-    rm(assets, envir = .jointrisk)
-    .jointrisk$assets <- new.env(parent = .jointrisk)
-    .jointrisk$assets$streets <- readRDS(stfn)
-    .jointrisk$assets$polygons <- polys$poly
-    return(polys$msg) 
-  }, seed = NULL)
+  invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
+  polys <- update_polygons(load_risk_cgen(jrfn), .jointrisk$assets$polygons, .jointrisk$assets$streets)
+  rm(assets, envir = .jointrisk)
+  .jointrisk$assets <- new.env(parent = .jointrisk)
+  .jointrisk$assets$streets <- readRDS(stfn)
+  .jointrisk$assets$polygons <- polys$poly
+  return(polys$msg) 
 }
 
 #* Get polygons id
@@ -75,18 +73,13 @@ function(INTE_NO, POAS_NO, PRCH_NO, res) {
     (.jointrisk$assets$polygons$xmax + 1000L) > min(poly$xmax) &
     (.jointrisk$assets$polygons$ymin - 1000L) < max(poly$ymin) &
     (.jointrisk$assets$polygons$ymax + 1000L) > min(poly$ymax)),]
-  future({
-    create_map(poly)
-  }, seed = NULL)
+  create_map(poly)
 }
 
 # Map ----
 library(leaflet)
 library(leaflet.extras)
 library(data.table)
-library(promises)
-library(future)
-future::plan(future::multisession(workers = 2))
 
 create_map <- function(poly) {
   
