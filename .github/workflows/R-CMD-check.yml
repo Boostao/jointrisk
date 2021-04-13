@@ -94,25 +94,28 @@ jobs:
         shell: Rscript {0}
   R-CMD-check-version:
     name: New version check
-    runs-on: [self-hosted, minicran]
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: Check if package version is greater
+      - name: Get latest pkgs list
+        run: |
+          curl \
+          -X GET -f -O \
+          -H "Authorization:token ${{ secrets.GH_PAT }}" \
+          -H "Accept: application/vnd.github.v3.raw" \
+          -L https://api.github.com/repos/LaCapitale/dsops-r-minicran/contents/.github/pkgs.csv
+      - name: Check if package version is greater than minicran
         shell: Rscript --no-init-file {0}
         run: |
-          pkg <- devtools::as.package(".")$package
-          new_v <- devtools::as.package(".")$version
-          cur_v <- available.packages(
-            repos = "http://localhost/", 
-            ignore_repo_cache = TRUE, 
-            type = "both",
-            filters = list(function(x) {x[rownames(x)==pkg,colnames(x)=="Version"]}))
+          pkg <- read.dcf("DESCRIPTION")[,"Package"][[1]]
+          new_v <- read.dcf("DESCRIPTION")[,"Version"][[1]]
+          cur_v <- read.csv("pkgs.csv", row.names = 1)[pkg,]
           if (isTRUE(nchar(cur_v) > 0)) {
-            if (utils::compareVersion(cur_v, new_v) > -1) {
-              stop(pkg, " package build version ", new_v,
-                   " is not greater than the current miniCRAN version ", cur_v,
-                   ". Bump version in package DESCRIPTION file.")
-            }
+           if (utils::compareVersion(cur_v, new_v) > -1) {
+            stop(pkg, " package build version ", new_v,
+                 " is not greater than the current miniCRAN version ", cur_v,
+                 ". Bump version in package DESCRIPTION file.")
+           }
           } else {
-            message("No current version found, probably a new package.")
+           message("No current version found, probably a new package.")
           }
