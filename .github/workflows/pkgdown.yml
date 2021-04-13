@@ -39,7 +39,7 @@ jobs:
           install.packages("remotes")
           saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
           writeLines(sprintf("R-%i.%i", getRversion()$major, getRversion()$minor), ".github/R-version")
-          
+
       - name: Cache R packages
         uses: actions/cache@v2
         with:
@@ -48,7 +48,7 @@ jobs:
             ${{ env.R_RENV_CACHE_DIR }}
           key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
-          
+
       - name: Install system dependencies
         if: runner.os == 'Linux'
         env:
@@ -70,7 +70,7 @@ jobs:
           remotes::install_cran("stringi", force = TRUE)
           remotes::install_cran("pkgdown")
         shell: Rscript {0}
-          
+
       - name: Install package
         run: R CMD INSTALL .
 
@@ -96,21 +96,13 @@ jobs:
         shell: Rscript {0}
         run: |
           pkgdown::deploy_to_branch(branch="pkgdocs", new_process = FALSE)
-  pkgdown_minicran:
-    needs: pkgdown
-    name: Minicran docs deployment
-    runs-on: [self-hosted, minicran]
-    steps:
-      - uses: actions/checkout@v2
-        if: github.event_name != 'pull_request'
-        with:
-          ref: pkgdocs
-      - name: Copy package docs
+      - name: Dispatch to Minicran
         if: github.event_name != 'pull_request'
         run: |
-          z <- grep("<a class=\"navbar-link\" href=\"index\\.html\">", readLines("index.html", warn = FALSE), value = TRUE)
-          docdir <- paste0("/var/www/minicran/docs/", gsub("\\s*<[^>]+>", "", z))
-          unlink(docdir, recursive = TRUE)
-          dir.create(docdir, recursive = TRUE)
-          file.copy(dir(".", full.names = TRUE), docdir, recursive = TRUE)
-        shell: Rscript --no-init-file {0}
+          curl \
+            -X POST -f \
+            -H "Authorization:token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/LaCapitale/dsops-r-minicran/dispatches \
+            -d '{"event_type":"pkgdown_trigger", "client_payload": {"repository":"'"$GITHUB_REPOSITORY"'", "ref":"pkgdocs"}}'
+
