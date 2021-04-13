@@ -5,82 +5,19 @@ on:
     branches: [master, main]
     paths-ignore:
     - '.github/**'
-    
+
 name: minicran
-    
+
 jobs:
   minicran:
-    runs-on: [self-hosted, minicran]
     name: Minicran deployment
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - name: Check if package patch version is greater
-        shell: Rscript --no-init-file {0}
+      - name: Dispatch to minicran
         run: |
-          pkg <- devtools::as.package(".")$package
-          new_v <- devtools::as.package(".")$version
-          cur_v <- available.packages(
-            repos = "http://localhost/", 
-            ignore_repo_cache = TRUE, 
-            type = "both",
-            filters = list(function(x) {x[rownames(x)==pkg,colnames(x)=="Version"]})
-          )
-          release <- FALSE
-          if (isTRUE(nchar(cur_v) > 0)) {
-          } else {
-            message("This package has never been released before. New release.")
-            cur_v <- "0.0.0"
-          }
-          patch_v <- function(x) gsub("(^[0-9]+(\\.[0-9]+){1,2})[0-9.]*$", "\\1", x)
-          if (utils::compareVersion(patch_v(cur_v), patch_v(new_v)) == -1) {
-            release <- TRUE
-          }
-          write(
-            paste("PACKAGE_RELEASE", release, sep = "="),
-            file = Sys.getenv("GITHUB_ENV"),
-            append = TRUE
-          )
-          if (isTRUE(release)) {
-            write(
-              paste("RELEASE_TAG", paste0("v", new_v), sep = "="),
-              file = Sys.getenv("GITHUB_ENV"),
-              append = TRUE
-            )
-          }
-          
-      - name: Create release
-        if: env.PACKAGE_RELEASE == 'TRUE'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: Release ${{ env.RELEASE_TAG }}
-          body: |
-            See README or NEWS for change in this release.
-          draft: false
-          prerelease: false
-          
-      - name: Build/Add source package
-        if: env.PACKAGE_RELEASE == 'TRUE'
-        shell: Rscript --no-init-file {0}
-        run: |
-          pkg <- devtools::build(".", vignettes = FALSE)
-          miniCRAN::addLocalPackage(basename(pkg), "..", "/var/www/minicran")
-          unlink(pkg)
-          
-      - name: Archive older packages
-        if: env.PACKAGE_RELEASE == 'TRUE'
-        shell: Rscript --no-init-file {0}
-        run: |
-          pkgs <- available.packages(
-            repos = "http://localhost/", 
-            ignore_repo_cache = TRUE, 
-            type = "source")
-          pkgs <- paste0(pkgs[,1], "_", pkgs[,2], ".tar.gz")
-          files <- dir(path = "/var/www/minicran/src/contrib", pattern = ".tar.gz")
-          archives <- files[!files %in% pkgs]
-          dir.create("/var/www/minicran/src/contrib/Archive", showWarnings = FALSE, recursive = TRUE)
-          file.rename(paste0("/var/www/minicran/src/contrib/", archives),
-                      paste0("/var/www/minicran/src/contrib/Archive/", archives))
+          curl \
+            -X POST -f \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/LaCapitale/dsops-r-minicran/dispatches \
+            -d '{"event_type":"minicran_trigger", "client_payload": {"repository":"'"$GITHUB_REPOSITORY"'", "ref":"'"$GITHUB_REF"'"}}'
