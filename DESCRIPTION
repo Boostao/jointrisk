@@ -15,4 +15,6 @@ Suggests:
     testthat (>= 2.1.0),
     leaflet,
     leaflet.extras
+Remotes:
+    LaCapitale/extraw
 RoxygenNote: 7.1.1
