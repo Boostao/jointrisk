@@ -1,7 +1,8 @@
 # Constant values
 TYPECONS_DEFAULT <- 6L;   RISASGRB_DEFAULT <- "4";  SUPERREZ_DEFAULT <- 1L
 PRINCFUS_DEFAULT <- 7L;   RADIUSMT_DEFAULT <- 9L;   GRDFLRAREA_M_LIM <- 10L
-GRDFLRAREA_P_LIM <- 200L; RADIUS_MFAD <- 2L;        LANE_WIDTH <- 2L
+GRDFLRAREA_P_LIM <- 200L; RADIUS_MFAD <- 2L;        LANE_WIDTH <- 2L;
+COMAUBAT_DEFAULT <- "N";
 
 TYPECONS_x_PRINCFUS <- matrix(nrow = 6L, ncol = 10L)
 TYPECONS_x_PRINCFUS[, 1L:4L] <- c(3L, 3L, 6L, 6L, 9L, 9L)
@@ -14,7 +15,7 @@ pkgV <- as.character(packageVersion("jointrisk"))
 #' @description Append TYPECONS, TYCONS2 compo at the end of input table.
 #' @param dt A data.table containing required fields.
 #' @return A data.table with TYPECONS and TYCONS2.
-#' @importFrom data.table set
+#' @import data.table
 append_typecons <- function(dt) {
   data.table::set(dt,
                   j = "REVETEME",
@@ -43,7 +44,6 @@ append_typecons <- function(dt) {
 #' later on. It is based on many risk characteristics.
 #' @return A data.table with an added output column.
 #' @param dt A data.table containing required fields.
-#' @importFrom data.table set %chin%
 calculate_radius <- function(dt) {
   data.table::set(dt,
                   j = "RISKRADIUS",
@@ -57,10 +57,16 @@ calculate_radius <- function(dt) {
                       RISASGRB[nax]       <- RISASGRB_DEFAULT
                     }
                     RISASGRB_F          <- c(1L, 2L)[1L + as.integer(RISASGRB %chin% c("5", "6", "P"))]
-
-                    COMAUBAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "COMAUBAT") %in% "O")]
-                    AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(.subset2(dt, "AFFECTAT") %in% "C6670")]
-                    M_OR_P_NA           <- 1L + as.integer(!.subset2(dt, "UMESSUPE") %in% c("ME"))
+                    COMAUBAT            <- .subset2(dt, "COMAUBAT")
+                    if (is.null(COMAUBAT)) {
+                      COMAUBAT <- rep(COMAUBAT_DEFAULT, nrow(dt))
+                    } else {
+                      nax                 <- which(is.na(COMAUBAT))
+                      COMAUBAT[nax]       <- COMAUBAT_DEFAULT
+                    }
+                    COMAUBAT_F          <- c(1, 1.25)[1L + as.integer(COMAUBAT %in% "O")]
+                    AFFECTAT_F          <- c(1, 1.25)[1L + as.integer(grepl("6670$", .subset2(dt, "AFFECTAT")))]
+                    M_OR_P_NA           <- 1L + as.integer(!.subset2(dt, "UMESSUPE") %in% c("M", "ME"))
                     CONVERSION_F        <- c(1, 10.764)[M_OR_P_NA]
                     LOWERLIMIT_F        <- c(GRDFLRAREA_M_LIM, GRDFLRAREA_P_LIM)[M_OR_P_NA]
                     # Construction type construct
@@ -91,7 +97,6 @@ calculate_radius <- function(dt) {
 #' @return An sf object
 #' @param polys An sf object of POLYGON.
 #' @param streets An sf object of LINESTRING with LANE_RADIUS.
-#' @importFrom data.table setDT set rbindlist
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
 buff_and_remove_streets <- function(polys, streets) {
   if (nrow(polys) < 200) {
@@ -106,7 +111,6 @@ buff_and_remove_streets <- function(polys, streets) {
 #' @return An sf object
 #' @param polys An sf object of POLYGON.
 #' @param streets An sf object of LINESTRING with LANE_RADIUS.
-#' @importFrom data.table setDT set rbindlist
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature st_crs
 #' @importFrom units set_units
 buff_and_remove_streets_api <- function(polys, streets) {
@@ -149,12 +153,14 @@ buff_and_remove_streets_api <- function(polys, streets) {
        )
        , "POLYGON")
      new_geo <- new_geo[sf:::CPL_geos_nearest_feature(pts[i], new_geo)]
-     data.table::set(
-       polys,
-       i = i,
-       j = "geometry",
-       value = list("geometry" = new_geo)
-     )
+     if (lengths(new_geo)) {
+       data.table::set(
+         polys,
+         i = i,
+         j = "geometry",
+         value = list("geometry" = new_geo)
+       ) 
+     }
    }
  }
  attr(polys, "class") <- cls_ori
@@ -166,7 +172,6 @@ buff_and_remove_streets_api <- function(polys, streets) {
 #' @return An sf object
 #' @param polys An sf object of POLYGON.
 #' @param streets An sf object of LINESTRING with LANE_RADIUS.
-#' @importFrom data.table setDT set rbindlist
 #' @importFrom sf st_buffer st_bbox st_cast st_difference st_union st_nearest_feature
 buff_and_remove_streets_batch <- function(polys, streets) {
   pts <- polys$geometry
@@ -209,12 +214,14 @@ buff_and_remove_streets_batch <- function(polys, streets) {
         )
         , "POLYGON")
       new_geo <- new_geo[sf:::CPL_geos_nearest_feature(pts[i], new_geo)]
-      data.table::set(
-        polys,
-        i = i,
-        j = "geometry",
-        value = list("geometry" = new_geo)
-      )
+      if (lengths(new_geo)) {
+        data.table::set(
+          polys,
+          i = i,
+          j = "geometry",
+          value = list("geometry" = new_geo)
+        )
+      }
     }
   }
   attr(polys, "class") <- cls_ori
@@ -227,7 +234,6 @@ buff_and_remove_streets_batch <- function(polys, streets) {
 #' @param dt A data.table containing required fields.
 #' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return A data.table.
-#' @importFrom data.table set %chin% setkey as.data.table rbindlist
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
 create_polygons <- function(dt, streets) {
  on.exit(gc())
@@ -307,7 +313,6 @@ update_polygons <- function(source, polygons = NULL, streets = NULL) {
 #' @param polygons A data.frame to compare dt to.
 #' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
 #' @return PRCH_ID and POLYGON_ID with package version.
-#' @importFrom data.table set setDT %chin% rbindlist copy
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
 #' @examples
 #' \dontrun{
@@ -321,11 +326,15 @@ get_joint_risks <- function(dt, polygons, streets) {
     res <- list("WARNING" = "Empty polygons definition.")
   } else {
     data.table::setDT(dt)
-    required <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM",
-                  "PRINCFUS", "SUPERREZ", "UMESSUPE", "TYPECONS")
-    if (!all(required %chin% names(dt))) {
-      notin <- required[!required %chin% names(dt)]
-      stop(paste("Required fields", paste(notin, collapse = ", "), "not found"))
+    required_cgen <- c("PRCH_ID", "COMAUBAT", "AFFECTAT", "LATITCOM", "LONGICOM",
+                       "PRINCFUS", "SUPERREZ", "UMESSUPE", "TYPECONS")
+    required_ugen <- c("SIT_ID", "AFFECTAT", "LATITCOM", "LONGICOM",
+                       "PRINCFUS", "SUPERREZ", "UMESSUPE", "TYPECONS")
+    if (!all(required_cgen %chin% names(dt)) & !all(required_ugen %chin% names(dt))) {
+      notin_cgen <- required_cgen[!required_cgen %chin% names(dt)]
+      notin_ugen <- required_ugen[!required_ugen %chin% names(dt)]
+      stop(paste0("Required fields for CGEN [", paste(notin_cgen, collapse = ", "),
+                  "] / UGEN [", paste(notin_ugen, collapse = ", "), "] not found"))
     }
     numcol  <- c("SUPERREZ", "PRINCFUS", "TYPECONS")
     suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
@@ -351,20 +360,24 @@ get_joint_risks <- function(dt, polygons, streets) {
     # Qu'est-ce qui arrive sur un copier-produit?
     # max RISASGRB
 
-    prch_id <- .subset2(dt, "PRCH_ID")
+    ref_id <- grep("^PRCH_ID$|^SIT_ID$", names(dt), value = TRUE)
+    id <- .subset2(dt, ref_id)
 
     res <- lapply(seq_len(length(matches)), function(x) {
-      self_idx <- which(prch_id[x] == .subset2(polygons, "PRCH_ID"))
+      self_idx <- which(id[x] == .subset2(polygons, ref_id))
       jr_idx <- poly_idx[matches[[x]]]
-      jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, MTTOTRAS, RISASGRB)]
+      jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(SOURCE, PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, SIT_ID, MTTOTRAS, RISASGRB)]
       tiv <- suppressWarnings(sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE))
       maxgrb <- suppressWarnings(max(.subset2(jr, "RISASGRB"), na.rm = TRUE))
-      list(
-        "PRCH_ID" = prch_id[x],
+      subres <- list(
+        "ID" = id[x],
         "jointRiskTotalInsuredValue" = tiv,
         "jointRiskMaximumPropertyClass" = maxgrb,
         "JOINTRISKS" = jr
-      )})
+      )
+      names(subres)[1] <- ref_id
+      return(subres)
+    })
   }
   return(res)
 }
@@ -469,7 +482,6 @@ append_polygons_idx <- function(dt,
 #' @title Get risks CGEN from extraw
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
-#' @importFrom data.table setnames
 get_risks_cgen <- function() {
   options(extraw.context = 11)
   dt <- extraw::get_policies(
@@ -492,11 +504,104 @@ get_risks_cgen <- function() {
 }
 
 #' @export
+#' @title Get risks UGEN from extraw
+#' @description Query to extract inforce commercial policies details for ugen to use in joint risks evaluation.
+#' @return A data.table object with IDs and columns.
+get_risks_ugen <- function() {
+
+  query <- paste0("
+    WITH 
+    MONTANT_LIMITE_TOTAL AS (
+      SELECT PRC_NO_POLICE,
+             PRC_TERME,
+             PRC_VERSION,
+             PRC_EMPLACEMENT,
+             SUM(PRC_LIMITE_CATASTROPHE) PRC_LIMITE_CATASTROPHE
+      FROM PRD_ACTUARIAT_VESTA..SOUS_PROT_COMM PRC
+      WHERE PRC_SECTION_GAR IN ('B', 'E')
+      GROUP BY PRC_NO_POLICE,
+               PRC_TERME,
+               PRC_VERSION,
+               PRC_EMPLACEMENT
+    ),
+    CODE_ACTIVITE AS (
+      SELECT SIA_SIT_ID,
+             MAX(CDA_CODE_INDUSTRIE) CDA_CODE_INDUSTRIE
+      FROM PRD_ACTUARIAT_VESTA..SOUS_SITUATION_ACTIVITE SIA
+      LEFT JOIN PRD_ACTUARIAT_VESTA..SOUS_CODE_ACTIVITE CDA
+             ON CDA.CDA_ITEM = SIA.SIA_ACTIVITE_ITEM AND
+                CDA.CDA_SEQUENCE = SIA.SIA_ACTIVITE_SEQUENCE AND
+                CDA.CDA_VERSION = SIA.SIA_ACTIVITE_VERSION
+      WHERE SIA_IND_PRINCIPALE = 'O'
+      GROUP BY SIA_SIT_ID
+    )
+    
+    SELECT SIT_ID,
+           POL_CODE_PRODUIT PROD_CODE,
+           SIT_SUPERFICIE SUPERREZ,
+           SIT_SUPERFICIE_UNITE UMESSUPE,
+           CAST(SIT_CODE_CONSTRUCTION AS INT) TYPECONS,
+           ADR_LATD_TERTR_DEBRD LATITCOM,
+           ADR_LONGT_TERTR_DEBRD LONGICOM,
+           UPPER(ADR_CODE_PRECISION_GEOCODE) PREGEOCO,
+           CASE SIR_TER_FUS
+             WHEN '000' THEN NULL
+             ELSE CAST(SIR_TER_FUS AS INT)
+           END PRINCFUS,
+           CDA_CODE_INDUSTRIE AFFECTAT,
+           PRC_LIMITE_CATASTROPHE MTTOTRAS
+    
+    FROM PRD_ACTUARIAT_VESTA..SOUS_POLICE POL
+    
+    JOIN PRD_ACTUARIAT_VESTA..SOUS_SITUATION SIT
+      ON SIT.SIT_NO_POLICE = POL.POL_NUMERO AND 
+         SIT.SIT_TERME = POL.POL_TERME AND
+         SIT.SIT_VERSION = POL.POL_VERSION
+    
+    LEFT JOIN CODE_ACTIVITE CDA
+           ON CDA.SIA_SIT_ID = SIT.SIT_ID
+    
+    LEFT JOIN PRD_ACTUARIAT_VESTA..SOUT_ADRESSE ADR
+           ON ADR.ADR_NO_REFERENCE = SIT.SIT_NO_POLICE AND
+              ADR.ADR_TERME = SIT.SIT_TERME AND
+              ADR.ADR_VERSION = SIT.SIT_VERSION AND
+              ADR.ADR_NO_IDENTITE = SIT.SIT_NUMERO AND
+              ADR.ADR_NO_SEQUENCE = '0' AND
+              ADR.ADR_PROVENANCE = 'SITUA'
+    
+    LEFT JOIN PRD_ACTUARIAT_VESTA..SOUS_SITUATION_TARIF SIR
+           ON SIR.SIR_NO_POLICE = SIT.SIT_NO_POLICE AND
+              SIR.SIR_TERME = SIT.SIT_TERME AND 
+              SIR.SIR_VERSION = SIT.SIT_VERSION AND
+              SIR.SIR_NO_SITUATION = SIT.SIT_NUMERO
+    
+    LEFT JOIN MONTANT_LIMITE_TOTAL PRC
+           ON PRC.PRC_NO_POLICE = SIT.SIT_NO_POLICE AND
+              PRC.PRC_TERME = SIT.SIT_TERME AND 
+              PRC.PRC_VERSION = SIT.SIT_VERSION AND
+              PRC.PRC_EMPLACEMENT = SIT.SIT_NUMERO
+    
+    WHERE POL_LIGAFF = 'BC' AND
+          POL_STATUT = 'V' AND 
+          POL_TRANSACTION != 'A' AND 
+          (SIT_TRANSACTION IS NULL OR SIT_TRANSACTION != 'A') AND
+          POL_DATE_PRISE_EFFET <= '", Sys.Date(),"' AND 
+          POL_DATE_FIN_EFFET > '", Sys.Date(),"'
+  ")
+  
+  con <- extraw::init_con(entity = "UGEN")
+  dt <- extraw::dispatch_query(con, query)
+
+  numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
+  suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
+  return(dt)
+}
+
+#' @export
 #' @title Get risks CGEN from a file
 #' @param file file to load
 #' @description Query to extract inforce commercial policies details for cgen to use in joint risks evaluation.
 #' @return A data.table object with IDs and columns.
-#' @importFrom data.table setDT fread setnames
 load_risk_cgen <- function(file) {
 
   dt <- data.table::fread(file, header = FALSE,
@@ -519,6 +624,30 @@ load_risk_cgen <- function(file) {
 
   return(dt[order((as.numeric(LATITCOM)*1000 + as.numeric(LONGICOM)))])
 
+}
+
+#' @export
+#' @title Get risks UGEN from a file
+#' @param file file to load
+#' @description Query to extract inforce commercial policies details for ugen to use in joint risks evaluation.
+#' @return A data.table object with IDs and columns.
+load_risk_ugen <- function(file) {
+  
+  dt <- data.table::fread(file)
+  data.table::setDT(dt, key = "SIT_ID")
+  
+  # Check that there is only one row per SIT_ID
+  if (length(unique(dt$SIT_ID)) < nrow(dt)) {
+    dups <- which(duplicated(dt$SIT_ID))
+    warning(paste0("Duplicated SIT_ID. Only the first row of duplicated SIT_ID will be kept."))
+    dt <- dt[-dups]
+  }
+  
+  numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
+  suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
+  
+  return(dt[order((as.numeric(LATITCOM)*1000 + as.numeric(LONGICOM)))])
+  
 }
 
 #' Warmup vectorizer functions for optimized runs.

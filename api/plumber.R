@@ -10,8 +10,21 @@ function(res) {
 #* Update polygons
 #* @get /update_polygons
 function() {
-  invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
-  polys <- update_polygons(load_risk_cgen(jrfn), .jointrisk$assets$polygons, .jointrisk$assets$streets)
+  invisible(gcs_get_object(jrfn_cgen, saveToDisk = jrfn_cgen, overwrite = TRUE))
+  invisible(gcs_get_object(jrfn_ugen, saveToDisk = jrfn_ugen, overwrite = TRUE))
+  polys <- update_polygons(
+    data.table::rbindlist(
+      list(
+        "CGEN" = load_risk_cgen(jrfn_cgen), 
+        "UGEN" = load_risk_ugen(jrfn_ugen)
+      ),
+      use.names = TRUE,
+      idcol = "SOURCE",
+      fill = TRUE
+    ),
+    .jointrisk$assets$polygons,
+    .jointrisk$assets$streets
+  )
   rm(assets, envir = .jointrisk)
   .jointrisk$assets <- new.env(parent = .jointrisk)
   .jointrisk$assets$streets <- readRDS(stfn)
@@ -36,18 +49,30 @@ Sys.setenv("GCS_AUTH_FILE" = Sys.getenv("GCS_AUTH_JSON_PATH"))
 suppressPackageStartupMessages({library(googleCloudStorageR)})
 
 sto <- gcs_list_objects()$name
-jrfn <- grep("souss004.csv?", sto, value = TRUE)[1]
-stfn <- grep("streets.RDS?", sto, value = TRUE)[1]
+jrfn_cgen <- grep("souss004.csv$", sto, value = TRUE, ignore.case = TRUE)[1]
+jrfn_ugen <- grep("jointrisk_ugen.csv$", sto, value = TRUE, ignore.case = TRUE)[1]
+stfn <- grep("streets.RDS$", sto, value = TRUE, ignore.case = TRUE)[1]
 
 .jointrisk <- new.env()
 .jointrisk$assets <- new.env(parent = .jointrisk)
 
-invisible(gcs_get_object(jrfn, saveToDisk = jrfn, overwrite = TRUE))
+invisible(gcs_get_object(jrfn_cgen, saveToDisk = jrfn_cgen, overwrite = TRUE))
+invisible(gcs_get_object(jrfn_ugen, saveToDisk = jrfn_ugen, overwrite = TRUE))
 invisible(gcs_get_object(stfn, saveToDisk = stfn, overwrite = TRUE))
 
 .jointrisk$assets$streets <- readRDS(stfn)
-
-.jointrisk$assets$polygons <- update_polygons(load_risk_cgen(jrfn), streets = .jointrisk$assets$streets)$poly
+.jointrisk$assets$polygons <- update_polygons(
+  data.table::rbindlist(
+    list(
+      "CGEN" = load_risk_cgen(jrfn_cgen), 
+      "UGEN" = load_risk_ugen(jrfn_ugen)
+    ),
+    use.names = TRUE,
+    idcol = "SOURCE",
+    fill = TRUE
+  ),
+  streets = .jointrisk$assets$streets
+)$poly
 
 warmup(.jointrisk$assets$polygons, .jointrisk$assets$streets)
 example <- jsonlite::fromJSON('[{"PRCH_ID":82804587,"COMAUBAT":"NA","AFFECTAT":"C8085","LATITCOM":"46.77418",
