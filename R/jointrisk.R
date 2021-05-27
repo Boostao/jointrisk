@@ -56,7 +56,7 @@ calculate_radius <- function(dt) {
                       nax                 <- which(is.na(RISASGRB))
                       RISASGRB[nax]       <- RISASGRB_DEFAULT
                     }
-                    RISASGRB_F          <- c(1L, 2L)[1L + as.integer(RISASGRB %chin% c("5", "6", "P"))]
+                    RISASGRB_F          <- c(1L, 2L)[1L + as.integer(RISASGRB %chin% c("5", "6", "R", "P"))]
                     COMAUBAT            <- .subset2(dt, "COMAUBAT")
                     if (is.null(COMAUBAT)) {
                       COMAUBAT <- rep(COMAUBAT_DEFAULT, nrow(dt))
@@ -534,6 +534,27 @@ get_risks_ugen <- function() {
                 CDA.CDA_VERSION = SIA.SIA_ACTIVITE_VERSION
       WHERE SIA_IND_PRINCIPALE = 'O'
       GROUP BY SIA_SIT_ID
+    ),
+    CLASSE_BIEN AS (
+      SELECT SUBQ.SIT_ID CLSB_SIT_ID,
+             MAX(SUBQ.CDA_PRO_CLASSE) CDA_PRO_CLASSE
+      FROM (
+        SELECT SIT.SIT_ID,
+	             CDA.CDA_PRO_CLASSE,
+               ROW_NUMBER() OVER(
+                  PARTITION BY SIA.SIA_SIT_ID, SIA.SIA_ACTIVITE_ITEM, SIA.SIA_ACTIVITE_SEQUENCE
+                  ORDER BY SIA.SIA_ACTIVITE_VERSION DESC) as RK
+	      FROM PRD_ACTUARIAT_VESTA..SOUS_SITUATION SIT
+	      JOIN PRD_ACTUARIAT_VESTA..SOUS_SITUATION_ACTIVITE SIA
+	        ON SIA.SIA_SIT_ID = SIT.SIT_ID
+	      JOIN PRD_ACTUARIAT_VESTA..SOUS_CODE_ACTIVITE CDA
+	        ON CDA.CDA_ITEM = SIA.SIA_ACTIVITE_ITEM
+	       AND CDA.CDA_SEQUENCE = SIA.SIA_ACTIVITE_SEQUENCE
+	       AND CDA.CDA_VERSION = SIA.SIA_ACTIVITE_VERSION
+        WHERE SIA.SIA_PC_SUPERFICIE > 0
+      ) SUBQ
+      WHERE SUBQ.RK = 1
+      GROUP BY SUBQ.SIT_ID
     )
     
     SELECT SIT_ID,
@@ -549,7 +570,8 @@ get_risks_ugen <- function() {
              ELSE CAST(SIR_TER_FUS AS INT)
            END PRINCFUS,
            CDA_CODE_INDUSTRIE AFFECTAT,
-           PRC_LIMITE_CATASTROPHE MTTOTRAS
+           PRC_LIMITE_CATASTROPHE MTTOTRAS,
+           CLSB.CDA_PRO_CLASSE RISASGRB
     
     FROM PRD_ACTUARIAT_VESTA..SOUS_POLICE POL
     
@@ -580,6 +602,9 @@ get_risks_ugen <- function() {
               PRC.PRC_TERME = SIT.SIT_TERME AND 
               PRC.PRC_VERSION = SIT.SIT_VERSION AND
               PRC.PRC_EMPLACEMENT = SIT.SIT_NUMERO
+    
+    LEFT JOIN CLASSE_BIEN CLSB
+           ON CLSB.CLSB_SIT_ID = SIT.SIT_ID
     
     WHERE POL_LIGAFF = 'BC' AND
           POL_STATUT = 'V' AND 
