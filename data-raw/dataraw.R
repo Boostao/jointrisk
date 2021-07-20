@@ -54,77 +54,105 @@ library(htmlwidgets)
 library(htmltools)
 library(jointrisk)
 library(sf)
-library(extraw)
 
 
-dt <- extraw::get_policies(
-    inforce = TRUE,
-    partial = "PRO",
-    filters = list(MPROD_ID = c(1071132, 2552253, 1071123, 1071124, 1071118, 2552251, 1071122, 1071125, 2552252),
-                   MLIAF_ID = 4,
-                   MCAAF_ID = 2),
-    detailid = c(140, 959, 971, 1082, 1083,  9045, 9406, 9408, 14218, 14219, 14220, 14367, 14491, 14650, 14660, 14661),
-    denormalize = TRUE
-  )
-streets <- readRDS("./data-raw/streets.RDS")
-res <- append_polygons_idx(dt, prefix = "PROD_", streets = streets)
+cloud.cap::gcs_get_object("prod_cap_lake_sedo_sandbox_share", "streets.RDS", overwrite = TRUE)
+
+dt <- data.table::rbindlist(
+  list(
+    "CGEN" = get_risks_cgen(), 
+    "UGEN" = get_risks_ugen()
+  ),
+  use.names = TRUE,
+  idcol = "SOURCE",
+  fill = TRUE
+)
+
+set(dt, j = "MERGEKEY", value = seq_len(nrow(dt)))
+
+streets <- readRDS("streets.RDS")
+
+polygons <- update_polygons(dt, streets = streets)$poly
+
+pockets <- sf::st_cast(sf::st_union(polygons), "POLYGON")
+
+idx <- sf::st_intersects(polygons, pockets)
+setDT(polygons)
+set(polygons, j = "POLYINDX", value = unlist(idx))
+setDT(dt)
+set(dt,
+    i = .subset2(polygons, "MERGEKEY"),
+    j = "POLYINDX",
+    value = .subset2(polygons, "POLYINDX"))
+suppressWarnings(
+  infosup <- dt[!is.na(POLYINDX),
+                list(POLYMAXRISASGRB = max(RISASGRB, na.rm = TRUE),
+                     POLYSUMMTTOTRAS = sum(MTTOTRAS, na.rm = TRUE)),
+                by = POLYINDX])
+setDT(infosup, key = "POLYINDX")
+setDT(dt     , key = "POLYINDX")
+pos <- which(!names(infosup) %chin% names(dt))
+dt[, names(infosup)[pos] := infosup[dt[, list(POLYINDX)], pos, with = FALSE]]
+dt[is.na(POLYINDX), c("POLYMAXRISASGRB", "POLYSUMMTTOTRAS") := list(RISASGRB, MTTOTRAS)]
+
+res <- list("source" = dt, "pockets" = pockets)
 
 create_map <- function(data, pocket) {
-
-data_cap <- data
-
-data_cap[, popup := (paste("<b>Intervenant :</b>",MINTE_ID, "<br/> <b>Produit :</b>",PRODUIT,"<br/> <b>TIV :</b>",MTTOTRAS
-                          ,"<br/> <b>FUS :</b>",PRINCFUS,"<br/> <b>Type construction :</b>",TYPECONS,"<br/> <b>Classe biens :</b>",RISASGRB
-                          ,"<br/> <b>Superficie :</b>",SUPERREZ,"<br/> <b>Rayon :</b>",round(RISKRADIUS,0)))]
-data_cap$popup3 <- sapply(data_cap$popup,HTML)
-
-# Setup the icons
-icons3 <- awesomeIcons(
-  icon = case_when(data_cap$PRODUIT == "MCO" ~ 'building',
-                   data_cap$PRODUIT == "MPF" ~ 'calendar',
-                   data_cap$PRODUIT == "MB"  ~ 'print',
-                   data_cap$PRODUIT == "MD"  ~ 'shopping-cart',
-                   data_cap$PRODUIT == "MC"  ~ 'cut',
-                   data_cap$PRODUIT == "MEN" ~ 'wrench',
-                   data_cap$PRODUIT == "MG"  ~ 'baby',
-                   data_cap$PRODUIT == "MGA" ~ 'car',
-                   data_cap$PRODUIT == "CC"  ~ 'copyright'),
-  iconColor = 'Gainsboro',
-  library = 'fa',
-  markerColor =case_when(data_cap$PRODUIT == "MCO" ~ 'darkred',
-                         data_cap$PRODUIT == "MPF" ~ 'darkgreen',
-                         data_cap$PRODUIT == "MB"  ~ 'darkblue',
-                         data_cap$PRODUIT == "MD"  ~ 'darkpurple',
-                         data_cap$PRODUIT == "MC"  ~ 'pink',
-                         data_cap$PRODUIT == "MEN" ~ 'blue',
-                         data_cap$PRODUIT == "MG"  ~ 'orange',
-                         data_cap$PRODUIT == "MGA" ~ 'red',
-                         data_cap$PRODUIT == "CC"  ~ 'black'),
-  squareMarker = FALSE)
-
-d_wgs84 <- st_transform(pocket, 4326)
-
-# Create the map
-map <- leaflet() %>%
-  setView(lng = -71.2682, lat = 46.7927, zoom = 07) %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "OpenStreetMap") %>%
-  addSearchOSM() %>%
-  addAwesomeMarkers(~as.numeric(LONGICOM),~as.numeric(LATITCOM), icon = icons3, popup = ~popup3,data = data_cap, clusterOptions =    markerClusterOptions())  %>%
-  addPolygons(data = d_wgs84) %>%
-  addMeasure(
-    position = "bottomleft",
-    primaryLengthUnit = "meters",
-    secondaryLengthUnit = "kilometers",
-    primaryAreaUnit = "sqmeters",
-    activeColor = "#3D535D",
-    completedColor = "#7D4479",
-    localization = "fr")
-return(map)
-
+  
+  data_cap <- data
+  
+  data_cap[, popup := (paste("<b>Intervenant :</b>", paste0(INTE_NO, SIT_ID), "<br/> <b>Produit :</b>",PROD_CODE,"<br/> <b>TIV :</b>",MTTOTRAS
+                             ,"<br/> <b>FUS :</b>",PRINCFUS,"<br/> <b>Type construction :</b>",TYPECONS,"<br/> <b>Classe biens :</b>",RISASGRB
+                             ,"<br/> <b>Superficie :</b>",SUPERREZ,"<br/> <b>Rayon :</b>",round(RISKRADIUS,0)))]
+  data_cap$popup3 <- sapply(data_cap$popup, HTML)
+  
+  # Setup the icons
+  icons3 <- awesomeIcons(
+    icon = case_when(data_cap$PRODUIT == "MCO" ~ 'building',
+                     data_cap$PRODUIT == "MPF" ~ 'calendar',
+                     data_cap$PRODUIT == "MB"  ~ 'print',
+                     data_cap$PRODUIT == "MD"  ~ 'shopping-cart',
+                     data_cap$PRODUIT == "MC"  ~ 'cut',
+                     data_cap$PRODUIT == "MEN" ~ 'wrench',
+                     data_cap$PRODUIT == "MG"  ~ 'baby',
+                     data_cap$PRODUIT == "MGA" ~ 'car',
+                     data_cap$PRODUIT == "CC"  ~ 'copyright'),
+    iconColor = 'Gainsboro',
+    library = 'fa',
+    markerColor =case_when(data_cap$PRODUIT == "MCO" ~ 'darkred',
+                           data_cap$PRODUIT == "MPF" ~ 'darkgreen',
+                           data_cap$PRODUIT == "MB"  ~ 'darkblue',
+                           data_cap$PRODUIT == "MD"  ~ 'darkpurple',
+                           data_cap$PRODUIT == "MC"  ~ 'pink',
+                           data_cap$PRODUIT == "MEN" ~ 'blue',
+                           data_cap$PRODUIT == "MG"  ~ 'orange',
+                           data_cap$PRODUIT == "MGA" ~ 'red',
+                           data_cap$PRODUIT == "CC"  ~ 'black'),
+    squareMarker = FALSE)
+  
+  d_wgs84 <- st_transform(pocket, 4326)
+  
+  # Create the map
+  map <- leaflet() %>%
+    setView(lng = -71.2682, lat = 46.7927, zoom = 07) %>%
+    addProviderTiles(providers$Esri.WorldImagery, group = "OpenStreetMap") %>%
+    addSearchOSM() %>%
+    addAwesomeMarkers(~as.numeric(LONGICOM),~as.numeric(LATITCOM), icon = icons3, popup = ~popup3,data = data_cap, clusterOptions =    markerClusterOptions())  %>%
+    addPolygons(data = d_wgs84) %>%
+    addMeasure(
+      position = "bottomleft",
+      primaryLengthUnit = "meters",
+      secondaryLengthUnit = "kilometers",
+      primaryAreaUnit = "sqmeters",
+      activeColor = "#3D535D",
+      completedColor = "#7D4479",
+      localization = "fr")
+  return(map)
+  
 }
 
 carte <- create_map(res$source, res$pockets)
-# carte
+carte
 
 month_report <- format(Sys.Date(), "%y%m")
 saveWidget(carte, paste0(getwd(), "/data-raw/Carte effectif_",month_report,".html"), selfcontained = T)
