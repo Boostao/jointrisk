@@ -101,33 +101,33 @@ create_map <- function(data, pocket) {
   
   data_cap <- data
   
-  data_cap[, popup := (paste("<b>Intervenant :</b>", paste0(INTE_NO, SIT_ID), "<br/> <b>Produit :</b>",PROD_CODE,"<br/> <b>TIV :</b>",MTTOTRAS
+  data_cap[, popup := (paste("<b>Source :</b>", SOURCE,"<br/> <b>Intervenant :</b>", INTE_NO, "<br/> <b>Situation ID :</b>", SIT_ID, "<br/> <b>Produit :</b>",PROD_CODE,"<br/> <b>TIV :</b>",MTTOTRAS
                              ,"<br/> <b>FUS :</b>",PRINCFUS,"<br/> <b>Type construction :</b>",TYPECONS,"<br/> <b>Classe biens :</b>",RISASGRB
                              ,"<br/> <b>Superficie :</b>",SUPERREZ,"<br/> <b>Rayon :</b>",round(RISKRADIUS,0)))]
   data_cap$popup3 <- sapply(data_cap$popup, HTML)
   
   # Setup the icons
   icons3 <- awesomeIcons(
-    icon = case_when(data_cap$PRODUIT == "MCO" ~ 'building',
-                     data_cap$PRODUIT == "MPF" ~ 'calendar',
-                     data_cap$PRODUIT == "MB"  ~ 'print',
-                     data_cap$PRODUIT == "MD"  ~ 'shopping-cart',
-                     data_cap$PRODUIT == "MC"  ~ 'cut',
-                     data_cap$PRODUIT == "MEN" ~ 'wrench',
-                     data_cap$PRODUIT == "MG"  ~ 'baby',
-                     data_cap$PRODUIT == "MGA" ~ 'car',
-                     data_cap$PRODUIT == "CC"  ~ 'copyright'),
+    icon = case_when(data_cap$PROD_CODE == "MCO" ~ 'building',
+                     data_cap$PROD_CODE == "MPF" ~ 'calendar',
+                     data_cap$PROD_CODE == "MB"  ~ 'print',
+                     data_cap$PROD_CODE == "MD"  ~ 'shopping-cart',
+                     data_cap$PROD_CODE == "MC"  ~ 'cut',
+                     data_cap$PROD_CODE == "MEN" ~ 'wrench',
+                     data_cap$PROD_CODE == "MG"  ~ 'baby',
+                     data_cap$PROD_CODE == "MGA" ~ 'car',
+                     data_cap$PROD_CODE == "CC"  ~ 'copyright'),
     iconColor = 'Gainsboro',
     library = 'fa',
-    markerColor =case_when(data_cap$PRODUIT == "MCO" ~ 'darkred',
-                           data_cap$PRODUIT == "MPF" ~ 'darkgreen',
-                           data_cap$PRODUIT == "MB"  ~ 'darkblue',
-                           data_cap$PRODUIT == "MD"  ~ 'darkpurple',
-                           data_cap$PRODUIT == "MC"  ~ 'pink',
-                           data_cap$PRODUIT == "MEN" ~ 'blue',
-                           data_cap$PRODUIT == "MG"  ~ 'orange',
-                           data_cap$PRODUIT == "MGA" ~ 'red',
-                           data_cap$PRODUIT == "CC"  ~ 'black'),
+    markerColor =case_when(data_cap$PROD_CODE == "MCO" ~ 'darkred',
+                           data_cap$PROD_CODE == "MPF" ~ 'darkgreen',
+                           data_cap$PROD_CODE == "MB"  ~ 'darkblue',
+                           data_cap$PROD_CODE == "MD"  ~ 'darkpurple',
+                           data_cap$PROD_CODE == "MC"  ~ 'pink',
+                           data_cap$PROD_CODE == "MEN" ~ 'blue',
+                           data_cap$PROD_CODE == "MG"  ~ 'orange',
+                           data_cap$PROD_CODE == "MGA" ~ 'red',
+                           data_cap$PROD_CODE == "CC"  ~ 'black'),
     squareMarker = FALSE)
   
   d_wgs84 <- st_transform(pocket, 4326)
@@ -154,5 +154,5 @@ create_map <- function(data, pocket) {
 carte <- create_map(res$source, res$pockets)
 carte
 
-month_report <- format(Sys.Date(), "%y%m")
-saveWidget(carte, paste0(getwd(), "/data-raw/Carte effectif_",month_report,".html"), selfcontained = T)
+# month_report <- format(Sys.Date(), "%y%m")
+# saveWidget(carte, paste0(getwd(), "/data-raw/Carte effectif_",month_report,".html"), selfcontained = T)
