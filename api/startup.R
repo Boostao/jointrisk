@@ -1,5 +1,8 @@
 library(plumber)
 
+Sys.setenv("GCS_DEFAULT_BUCKET" = "cgencomm-r-dev-jointrisk")
+Sys.setenv("GCS_AUTH_JSON_PATH" = "../data-raw/gcs_auth.json")
+
 pr <- plumb("./api/plumber.R")
 pr$registerHooks(list(
   postserialize = function(req, res) {
@@ -9,4 +12,6 @@ pr$registerHooks(list(
   }
 ))
 
+
 pr$run(host = "0.0.0.0", port = 8004)
+

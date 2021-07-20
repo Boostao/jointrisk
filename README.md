@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.2
+
+Add support for UGEN
+
 # 1.1.6
 
 Reduce the amount of segments in `st_buffer` from 30 to 3. Reducing geometries compute complexity.
