@@ -290,7 +290,7 @@ create_polygons <- function(dt, streets) {
 #' get_cgen_risk() (require extraw).
 #' @param polygons A polygons ref to update from.
 #' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
-#' @return A data.table with PRCH_ID and POLYGON_ID.
+#' @return A list with a message and a spatial feature data frame.
 update_polygons <- function(source, polygons = NULL, streets = NULL) {
   tick <- Sys.time()
   prev_npol <- if (is.null(polygons)) {0L} else {nrow(polygons)}
@@ -312,7 +312,7 @@ update_polygons <- function(source, polygons = NULL, streets = NULL) {
 #' @param dt A data.frame with the following
 #' @param polygons A data.frame to compare dt to.
 #' @param streets A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.
-#' @return PRCH_ID and POLYGON_ID with package version.
+#' @return A list of joint risks aggregate information including a data frame of included risks for all provided input.
 #' @importFrom sf st_as_sf st_buffer st_union st_cast st_intersects st_transform st_bbox
 #' @examples
 #' \dontrun{
@@ -360,22 +360,31 @@ get_joint_risks <- function(dt, polygons, streets) {
     # Qu'est-ce qui arrive sur un copier-produit?
     # max RISASGRB
 
-    ref_id <- grep("^PRCH_ID$|^SIT_ID$", names(dt), value = TRUE)
-    id <- .subset2(dt, ref_id)
+    prch_id <- .subset2(dt, "PRCH_ID")
+    sit_id <- .subset2(dt, "SIT_ID")
+    if (is.null(sit_id)) {
+      ref_id <- rep("PRCH_ID", nrow(dt))
+    } else if (is.null(prch_id)) {
+      ref_id <- rep("SIT_ID", nrow(dt))
+    } else {
+      ref_id <- rep("PRCH_ID", nrow(dt))
+      ref_id[is.na(prch_id)] <- "SIT_ID"
+    }
+    id <- list("PRCH_ID" = prch_id, "SIT_ID" = sit_id)
 
     res <- lapply(seq_len(length(matches)), function(x) {
-      self_idx <- which(id[x] == .subset2(polygons, ref_id))
+      self_idx <- which(id[[ref_id[x]]][x] == .subset2(polygons, ref_id[x]))
       jr_idx <- poly_idx[matches[[x]]]
       jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(SOURCE, PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, SIT_ID, MTTOTRAS, RISASGRB)]
       tiv <- suppressWarnings(sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE))
       maxgrb <- suppressWarnings(max(.subset2(jr, "RISASGRB"), na.rm = TRUE))
       subres <- list(
-        "ID" = id[x],
+        "ID" = id[[ref_id[x]]][x],
         "jointRiskTotalInsuredValue" = tiv,
         "jointRiskMaximumPropertyClass" = maxgrb,
         "JOINTRISKS" = jr
       )
-      names(subres)[1] <- ref_id
+      names(subres)[1] <- ref_id[x]
       return(subres)
     })
   }

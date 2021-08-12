@@ -15,7 +15,7 @@ get_cgen_risk() (require extraw).}
 \item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
-A data.table with PRCH_ID and POLYGON_ID.
+A list with a message and a spatial feature data frame.
 }
 \description{
 This function is used to update and return polygon table.

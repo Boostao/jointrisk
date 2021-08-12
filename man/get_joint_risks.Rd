@@ -14,7 +14,7 @@ get_joint_risks(dt, polygons, streets)
 \item{streets}{A LINESTRING object of navstreets with LANE_RADIUS and geometry elements.}
 }
 \value{
-PRCH_ID and POLYGON_ID with package version.
+A list of joint risks aggregate information including a data frame of included risks for all provided input.
 }
 \description{
 This function return polygon id from an input data.table using
