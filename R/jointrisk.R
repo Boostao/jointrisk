@@ -301,7 +301,6 @@ update_polygons <- function(source, polygons = NULL, streets = NULL) {
   msg <- paste0("Polygons definition updated on ", paste0(Sys.getenv(c("COMPUTERNAME", "HOSTNAME")), collapse = ""),
       " in ", format(unclass(tock), digits = 4)," ", attr(tock, "units"),". Previous definition had ",
       prev_npol," polygons, current has ", next_npol," polygons.\n", sep = "")
-  cat(msg)
   return(list(msg = msg, poly = polygons))
 }
 
