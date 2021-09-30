@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.2.3
+
+Handle NULL PRC_LIMITE_CATASTROPHE.
+
 # 1.2
 
 Add support for UGEN
