@@ -644,8 +644,8 @@ get_risks_ugen <- function() {
   dt <- extraw::dispatch_query(con, query)
   
   set(dt, j = "INTE_NO", value = paste0("U", dt[["POL_NUMERO"]]))
-  set(dt, j = "POAS_NO", value = paste(dt[["POL_TERME"]], dt[["POL_VERSION"]], sep = "-"))
-  set(dt, j = "PRCH_NO", value = dt[["SIT_NUMERO"]])
+  set(dt, j = "POAS_NO", value = dt[["POL_TERME"]])
+  set(dt, j = "PRCH_NO", value = dt[["POL_VERSION"]])
 
   numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
@@ -706,8 +706,8 @@ load_risk_ugen <- function(file) {
   }
   
   set(dt, j = "INTE_NO", value = paste0("U", dt[["POL_NUMERO"]]))
-  set(dt, j = "POAS_NO", value = paste(dt[["POL_TERME"]], dt[["POL_VERSION"]], sep = "-"))
-  set(dt, j = "PRCH_NO", value = dt[["SIT_NUMERO"]])
+  set(dt, j = "POAS_NO", value = dt[["POL_TERME"]])
+  set(dt, j = "PRCH_NO", value = dt[["POL_VERSION"]])
   
   numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
