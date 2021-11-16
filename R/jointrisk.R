@@ -374,7 +374,21 @@ get_joint_risks <- function(dt, polygons, streets) {
     res <- lapply(seq_len(length(matches)), function(x) {
       self_idx <- which(id[[ref_id[x]]][x] == .subset2(polygons, ref_id[x]))
       jr_idx <- poly_idx[matches[[x]]]
-      jr <- setDT(copy(polygons[jr_idx[!jr_idx %in% self_idx], with = FALSE]))[, list(SOURCE, PRCH_ID, INTE_NO, POAS_NO, PRCH_NO, SIT_ID, MTTOTRAS, RISASGRB)]
+      jr <- setDT(
+        copy(
+          polygons[
+            jr_idx[!jr_idx %in% self_idx],
+            with = FALSE
+          ]
+        )
+      )[,
+        list(
+          SOURCE,
+          PRCH_ID, INTE_NO, POAS_NO, PRCH_NO,
+          SIT_ID, POL_NUMERO, POL_TERME, POL_VERSION, SIT_NUMERO,
+          MTTOTRAS, RISASGRB
+        )
+      ]
       tiv <- suppressWarnings(sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE))
       maxgrb <- suppressWarnings(max(.subset2(jr, "RISASGRB"), na.rm = TRUE))
       subres <- list(
@@ -566,6 +580,10 @@ get_risks_ugen <- function() {
     )
     
     SELECT SIT_ID,
+           POL_NUMERO,
+           POL_TERME,
+           POL_VERSION,
+           SIT_NUMERO,
            POL_CODE_PRODUIT PROD_CODE,
            SIT_SUPERFICIE SUPERREZ,
            SIT_SUPERFICIE_UNITE UMESSUPE,
@@ -624,6 +642,10 @@ get_risks_ugen <- function() {
   
   con <- extraw::init_con(entity = "UGEN")
   dt <- extraw::dispatch_query(con, query)
+  
+  set(dt, j = "INTE_NO", value = paste0("U", dt[["POL_NUMERO"]]))
+  set(dt, j = "POAS_NO", value = paste(dt[["POL_TERME"]], dt[["POL_VERSION"]], sep = "-"))
+  set(dt, j = "PRCH_NO", value = dt[["SIT_NUMERO"]])
 
   numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
@@ -666,7 +688,14 @@ load_risk_cgen <- function(file) {
 #' @return A data.table object with IDs and columns.
 load_risk_ugen <- function(file) {
   
-  dt <- data.table::fread(file)
+  dt <- data.table::fread(
+    file,
+    colClasses = c(
+      "POL_NUMERO" = "character",
+      "POL_TERME" = "character",
+      "POL_VERSION" = "character"
+    )
+  )
   data.table::setDT(dt, key = "SIT_ID")
   
   # Check that there is only one row per SIT_ID
@@ -675,6 +704,10 @@ load_risk_ugen <- function(file) {
     warning(paste0("Duplicated SIT_ID. Only the first row of duplicated SIT_ID will be kept."))
     dt <- dt[-dups]
   }
+  
+  set(dt, j = "INTE_NO", value = paste0("U", dt[["POL_NUMERO"]]))
+  set(dt, j = "POAS_NO", value = paste(dt[["POL_TERME"]], dt[["POL_VERSION"]], sep = "-"))
+  set(dt, j = "PRCH_NO", value = dt[["SIT_NUMERO"]])
   
   numcol  <- c("SUPERREZ", "PRINCFUS", "MTTOTRAS", "TYPECONS")
   suppressWarnings(dt[, (numcol) := lapply(.SD, as.integer), .SDcols = numcol])
