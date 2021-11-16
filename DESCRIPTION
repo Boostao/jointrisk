@@ -1,7 +1,7 @@
 Package: jointrisk
 Type: Package
 Title: Obtain et return joint risk IDs
-Version: 1.2.4
+Version: 1.2.5
 Author: Alexandre Leclerc, Bruno Tremblay
 Maintainer: Bruno Tremblay <bruno.tremblay@lacapitale.com>
 Description: Joint risk commercial project.

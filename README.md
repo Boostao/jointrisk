@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.2.5
+
+Remap UGEN fields into CGEN fields.
+
 # 1.2.4
 
 Add POL_NUMERO, POL_TERME, POL_VERSION and SIT_NUMERO.
