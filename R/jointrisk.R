@@ -390,6 +390,13 @@ get_joint_risks <- function(dt, polygons, streets) {
         )
       ]
       tiv <- suppressWarnings(sum(.subset2(jr, "MTTOTRAS"), na.rm = TRUE))
+      
+      risasgrb <- .subset2(jr, "RISASGRB")
+      if (all(c("R", "P") %chin% risasgrb)) {
+        maxgrb <- "P"
+      } else {
+        maxgrb <- suppressWarnings(max(risasgrb, na.rm = TRUE))
+      }
       maxgrb <- suppressWarnings(max(.subset2(jr, "RISASGRB"), na.rm = TRUE))
       subres <- list(
         "ID" = id[[ref_id[x]]][x],

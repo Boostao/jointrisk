@@ -2,6 +2,10 @@
 
 Updates
 
+# 1.2.6
+
+For `jointRiskMaximumPropertyClass`, return `P` instead of `R` when both codes are present in the list of joint risks.
+
 # 1.2.5
 
 Remap UGEN fields into CGEN fields.
